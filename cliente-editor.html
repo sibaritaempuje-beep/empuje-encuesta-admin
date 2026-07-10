@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tu encuesta de salida · Editor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f1ec; color: #2b2622; min-height: 100vh;
+  }
+  .shell { max-width: 680px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 20px; margin-bottom: 2px; }
+  .sub { color: #8a7d6d; font-size: 13px; margin-bottom: 20px; }
+  .card { background: #fffdfb; border: 1px solid #e7ded4; border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: #a08f7d; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+  label:first-of-type { margin-top: 0; }
+  input[type="text"], input[type="number"], input[type="password"], select {
+    width: 100%; padding: 10px 12px; font-size: 14px; font-family: inherit;
+    border: 1px solid #e0d6ca; border-radius: 9px; background: #fff; color: #2b2622;
+  }
+  input[type="color"] { width: 100%; height: 40px; padding: 2px; border: 1px solid #e0d6ca; border-radius: 9px; background: #fff; cursor: pointer; }
+  .hint { font-size: 12px; color: #9b8d7c; margin-top: 3px; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 560px) { .grid3 { grid-template-columns: repeat(2, 1fr); } }
+  button { font-family: inherit; cursor: pointer; border: 0; border-radius: 9px; font-size: 14px; font-weight: 600; padding: 11px 16px; }
+  .btn-primary { background: #2b2622; color: #fffdfb; width: 100%; }
+  .btn-primary:hover { background: #41382f; }
+  .btn-ghost { background: transparent; color: #8a7d6d; font-weight: 500; padding: 6px 8px; font-size: 13px; }
+  .btn-ghost:hover { color: #2b2622; }
+  .opt-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .opt-row input { flex: 1; }
+  .opt-btn { background: #f1eae1; color: #6b5d4c; width: 34px; height: 38px; padding: 0; border-radius: 8px; font-size: 15px; flex: none; }
+  .opt-btn:hover { background: #e7dccd; }
+  .switch { display: flex; align-items: center; gap: 10px; }
+  .switch input { width: auto; transform: scale(1.4); accent-color: #2b2622; }
+  .switch span { font-size: 14px; }
+  .msg { padding: 11px 14px; border-radius: 9px; font-size: 13px; margin-bottom: 14px; display: none; }
+  .msg.ok { display: block; background: #e8f3e6; color: #295c26; border: 1px solid #cfe5cb; }
+  .msg.err { display: block; background: #fbe9e7; color: #86261c; border: 1px solid #f2cfc9; white-space: pre-wrap; }
+  .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+  .preview-link { font-size: 13px; word-break: break-all; background: #f6f1ea; border-radius: 8px; padding: 9px 11px; margin-top: 6px; }
+  #editor, #setup, #login { display: none; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── SETUP (uso interno Empuje) ──────────────────────── -->
+  <div id="setup">
+    <h1>Editor del cliente · Configurar</h1>
+    <p class="sub">Uso interno de Empuje: generá el link del editor para mandarle al cliente.</p>
+    <div class="card">
+      <div id="setup-msg" class="msg"></div>
+      <label for="s-name">Nombre del cliente</label>
+      <input type="text" id="s-name" placeholder="Top White">
+      <label for="s-worker">URL del Worker</label>
+      <input type="text" id="s-worker" placeholder="https://topwhite-encuesta.xxxx.workers.dev">
+      <div style="margin-top:16px">
+        <button class="btn-primary" id="btn-genlink">Generar link del editor</button>
+      </div>
+      <div id="link-out" class="msg"></div>
+      <p class="hint">El link NO lleva la clave: el cliente entra con el usuario y contraseña que le configuraste desde el admin.</p>
+    </div>
+  </div>
+
+  <!-- ── LOGIN (cliente) ─────────────────────────────────── -->
+  <div id="login">
+    <h1 id="l-title">Tu encuesta de salida</h1>
+    <p class="sub">Ingresá con el usuario y la clave que te compartió el equipo de Empuje.</p>
+    <div class="card">
+      <div id="login-msg" class="msg"></div>
+      <label for="l-user">Usuario</label>
+      <input type="text" id="l-user" autocomplete="username">
+      <label for="l-pass">Clave</label>
+      <input type="password" id="l-pass" autocomplete="current-password">
+      <label class="switch" style="margin-top:14px">
+        <input type="checkbox" id="l-remember" checked>
+        <span>Recordarme en este dispositivo</span>
+      </label>
+      <div style="margin-top:16px">
+        <button class="btn-primary" id="btn-login">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EDITOR (cliente) ────────────────────────────────── -->
+  <div id="editor">
+    <div class="topbar">
+      <div>
+        <h1 id="e-title">Tu encuesta de salida</h1>
+        <p class="sub" style="margin-bottom:0">Editá la pregunta que ve tu clienta antes de irse de la tienda.</p>
+      </div>
+      <button class="btn-ghost" id="btn-logout">Salir</button>
+    </div>
+
+    <div id="editor-msg" class="msg"></div>
+
+    <div class="card">
+      <h2>Estado</h2>
+      <label class="switch">
+        <input type="checkbox" id="c-enabled">
+        <span>Encuesta activa en la tienda</span>
+      </label>
+      <p class="hint">Si la apagás, deja de aparecer para todo el mundo. Los cambios tardan un par de minutos en verse.</p>
+    </div>
+
+    <div class="card">
+      <h2>La pregunta</h2>
+      <label for="c-title">Texto chiquito de arriba</label>
+      <input type="text" id="c-title" placeholder="Antes de irte…">
+      <label for="c-text">Pregunta principal</label>
+      <input type="text" id="c-text" placeholder="¿Qué te frenó de comprar hoy?">
+      <label>Opciones para elegir</label>
+      <div id="c-options"></div>
+      <button class="btn-ghost" id="btn-add-opt">+ Agregar opción</button>
+      <p class="hint">Consejo: entre 4 y 6 opciones. Más que eso, la gente no lee.</p>
+      <label for="c-open">Opción que deja escribir libremente</label>
+      <select id="c-open"></select>
+      <label for="c-thanks">Mensaje de agradecimiento</label>
+      <input type="text" id="c-thanks" placeholder="¡Gracias! Tu respuesta nos ayuda un montón.">
+    </div>
+
+    <div class="card">
+      <h2>Colores</h2>
+      <div class="grid3">
+        <div><label for="b-background">Fondo</label><input type="color" id="b-background"></div>
+        <div><label for="b-text">Texto</label><input type="color" id="b-text"></div>
+        <div><label for="b-muted">Texto suave</label><input type="color" id="b-muted"></div>
+        <div><label for="b-border">Bordes</label><input type="color" id="b-border"></div>
+        <div><label for="b-buttonBackground">Botón (fondo)</label><input type="color" id="b-buttonBackground"></div>
+        <div><label for="b-buttonText">Botón (texto)</label><input type="color" id="b-buttonText"></div>
+      </div>
+      <button class="btn-ghost" id="btn-reset-branding" style="margin-top:10px">Volver a los colores originales</button>
+    </div>
+
+    <div class="card">
+      <h2>Cuándo aparece</h2>
+      <div class="row">
+        <div>
+          <label for="c-minsec">Tiempo mínimo navegando (segundos)</label>
+          <input type="number" id="c-minsec" min="0">
+        </div>
+        <div>
+          <label for="c-freq">No repetir antes de (días)</label>
+          <input type="number" id="c-freq" min="0">
+        </div>
+      </div>
+      <p class="hint" style="margin-top:10px">La encuesta solo le aparece a quien empezó el proceso de compra y está por irse — a nadie más. Estos dos valores ajustan la sensibilidad; ante la duda, dejalos como están.</p>
+    </div>
+
+    <div class="card">
+      <h2>Verla en tu tienda</h2>
+      <p class="hint">Abrí este link en tu celular y tocá el botón "atrás" para ver la encuesta como la ve tu clienta:</p>
+      <div class="preview-link" id="preview-link">—</div>
+    </div>
+
+    <button class="btn-primary" id="btn-save">Guardar cambios</button>
+    <p class="hint" style="text-align:center;margin-top:8px">Los cambios se ven en la tienda en ~2 minutos.</p>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_CFG = "empuje_survey_client_editor_cfg";
+  var LS_AUTH = "empuje_survey_client_editor_auth";
+
+  var DEFAULT_BRANDING = {
+    background: "#fffdfb", text: "#2b2622", muted: "#a08f7d",
+    border: "#e7ded4", buttonBackground: "#2b2622", buttonText: "#fffdfb"
+  };
+  var BRANDING_KEYS = ["background", "text", "muted", "border", "buttonBackground", "buttonText"];
+
+  var state = { name: "", worker: "", user: "", pass: "", options: [], readonly: {} };
+
+  function $(id) { return document.getElementById(id); }
+  function showMsg(el, text, kind) {
+    el.textContent = text; el.className = "msg " + kind;
+    if (kind === "ok") setTimeout(function () { el.className = "msg"; }, 3500);
+  }
+  function b64e(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+  function b64d(str) { return JSON.parse(decodeURIComponent(escape(atob(str)))); }
+
+  function show(screen) {
+    ["setup", "login", "editor"].forEach(function (s) {
+      $(s).style.display = s === screen ? "block" : "none";
+    });
+    window.scrollTo(0, 0);
+  }
+
+  function api(method, body) {
+    return fetch(state.worker.replace(/\/+$/, "") + "/client/config", {
+      method: method,
+      headers: {
+        "X-Client-User": state.user,
+        "X-Client-Pass": state.pass,
+        "Content-Type": "application/json"
+      },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      return r.json().then(function (data) {
+        if (!r.ok) throw data;
+        return data;
+      });
+    });
+  }
+
+  // ── Setup interno (Empuje) ────────────────────────────────
+  $("btn-genlink").addEventListener("click", function () {
+    var n = $("s-name").value.trim();
+    var w = $("s-worker").value.trim().replace(/\/+$/, "");
+    if (!n || !w) { showMsg($("setup-msg"), "Completá nombre y URL del Worker.", "err"); return; }
+    if (w.indexOf("https://") !== 0) { showMsg($("setup-msg"), "La URL tiene que empezar con https://", "err"); return; }
+    $("setup-msg").className = "msg";
+    var link = location.origin + location.pathname + "#w=" + b64e({ name: n, worker: w });
+    showMsg($("link-out"), link, "ok");
+  });
+
+  // ── Login del cliente ─────────────────────────────────────
+  $("btn-login").addEventListener("click", function () {
+    var u = $("l-user").value.trim();
+    var p = $("l-pass").value;
+    if (!u || !p) { showMsg($("login-msg"), "Completá usuario y clave.", "err"); return; }
+    state.user = u; state.pass = p;
+    api("GET").then(function (data) {
+      if ($("l-remember").checked) {
+        try { localStorage.setItem(LS_AUTH, JSON.stringify({ user: u, pass: p })); } catch (e) {}
+      }
+      openEditor(data.config);
+    })["catch"](function (err) {
+      showMsg($("login-msg"), (err && err.message) || "No se pudo entrar. Revisá usuario y clave.", "err");
+    });
+  });
+
+  $("btn-logout").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_AUTH); } catch (e) {}
+    state.user = ""; state.pass = "";
+    $("l-pass").value = "";
+    show("login");
+  });
+
+  // ── Editor ────────────────────────────────────────────────
+  function renderOptions() {
+    var box = $("c-options");
+    box.innerHTML = "";
+    state.options.forEach(function (opt, i) {
+      var row = document.createElement("div");
+      row.className = "opt-row";
+      var input = document.createElement("input");
+      input.type = "text"; input.value = opt;
+      input.addEventListener("input", function () { state.options[i] = input.value; renderOpenSelect(); });
+      var up = document.createElement("button");
+      up.className = "opt-btn"; up.type = "button"; up.textContent = "\u2191";
+      up.addEventListener("click", function () {
+        if (i === 0) return;
+        var t = state.options[i - 1]; state.options[i - 1] = state.options[i]; state.options[i] = t;
+        renderOptions(); renderOpenSelect();
+      });
+      var down = document.createElement("button");
+      down.className = "opt-btn"; down.type = "button"; down.textContent = "\u2193";
+      down.addEventListener("click", function () {
+        if (i === state.options.length - 1) return;
+        var t = state.options[i + 1]; state.options[i + 1] = state.options[i]; state.options[i] = t;
+        renderOptions(); renderOpenSelect();
+      });
+      var del = document.createElement("button");
+      del.className = "opt-btn"; del.type = "button"; del.textContent = "\u00d7";
+      del.addEventListener("click", function () {
+        state.options.splice(i, 1);
+        renderOptions(); renderOpenSelect();
+      });
+      row.appendChild(input); row.appendChild(up); row.appendChild(down); row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+
+  function renderOpenSelect(selected) {
+    var sel = $("c-open");
+    var current = selected !== undefined ? selected : sel.value;
+    sel.innerHTML = "";
+    var none = document.createElement("option");
+    none.value = ""; none.textContent = "(ninguna)";
+    sel.appendChild(none);
+    state.options.forEach(function (opt) {
+      var o = document.createElement("option");
+      o.value = opt; o.textContent = opt;
+      sel.appendChild(o);
+    });
+    sel.value = state.options.indexOf(current) !== -1 ? current : "";
+  }
+
+  function setBrandingInputs(branding) {
+    var b = Object.assign({}, DEFAULT_BRANDING, branding || {});
+    BRANDING_KEYS.forEach(function (k) { $("b-" + k).value = b[k]; });
+  }
+
+  function renderPreviewLink() {
+    var d = (state.readonly.storeDomain || "").replace(/\/+$/, "");
+    $("preview-link").textContent = d
+      ? d + "/?" + (state.readonly.previewParam || "tw_survey") + "=" + (state.readonly.previewValue || "preview")
+      : "Pedile el link de vista previa al equipo de Empuje.";
+  }
+
+  function openEditor(cfg) {
+    cfg = cfg || {};
+    state.readonly = {
+      storeDomain: cfg.storeDomain || "",
+      previewParam: cfg.previewParam || "tw_survey",
+      previewValue: cfg.previewValue || "preview"
+    };
+    $("c-enabled").checked = cfg.enabled !== false;
+    $("c-title").value = (cfg.question && cfg.question.title) || "";
+    $("c-text").value = (cfg.question && cfg.question.text) || "";
+    state.options = (cfg.question && cfg.question.options) ? cfg.question.options.slice() : [];
+    renderOptions();
+    renderOpenSelect((cfg.question && cfg.question.openTrigger) || "");
+    $("c-thanks").value = cfg.thanksMessage || "";
+    setBrandingInputs(cfg.branding);
+    $("c-minsec").value = typeof cfg.minSeconds === "number" ? cfg.minSeconds : 45;
+    $("c-freq").value = typeof cfg.frequencyDays === "number" ? cfg.frequencyDays : 30;
+    renderPreviewLink();
+    show("editor");
+  }
+
+  $("btn-add-opt").addEventListener("click", function () {
+    state.options.push("");
+    renderOptions(); renderOpenSelect();
+  });
+
+  $("btn-reset-branding").addEventListener("click", function () { setBrandingInputs(null); });
+
+  $("btn-save").addEventListener("click", function () {
+    var opts = state.options.map(function (s) { return s.trim(); }).filter(Boolean);
+    if (opts.length < 2) {
+      showMsg($("editor-msg"), "La pregunta necesita al menos 2 opciones.", "err");
+      window.scrollTo(0, 0);
+      return;
+    }
+    var branding = {};
+    BRANDING_KEYS.forEach(function (k) { branding[k] = $("b-" + k).value; });
+    var body = {
+      enabled: $("c-enabled").checked,
+      minSeconds: parseInt($("c-minsec").value, 10) || 0,
+      frequencyDays: parseInt($("c-freq").value, 10) || 0,
+      thanksMessage: $("c-thanks").value.trim(),
+      branding: branding,
+      question: {
+        title: $("c-title").value.trim(),
+        text: $("c-text").value.trim(),
+        options: opts,
+        openTrigger: $("c-open").value
+      }
+    };
+    api("PUT", body).then(function () {
+      showMsg($("editor-msg"), "Guardado. Se ve en la tienda en ~2 minutos.", "ok");
+      window.scrollTo(0, 0);
+    })["catch"](function (err) {
+      var m = err && err.errors ? err.errors.join("\n") : (err && err.message) || "Error al guardar.";
+      showMsg($("editor-msg"), m, "err");
+      window.scrollTo(0, 0);
+    });
+  });
+
+  // ── Init: hash del link > localStorage > setup ────────────
+  (function init() {
+    var h = location.hash || "";
+    if (h.indexOf("#w=") === 0) {
+      try {
+        var d = b64d(h.slice(3));
+        if (d && d.worker) {
+          state.name = d.name || ""; state.worker = d.worker;
+          try { localStorage.setItem(LS_CFG, JSON.stringify({ name: state.name, worker: state.worker })); } catch (e) {}
+          history.replaceState(null, "", location.pathname + location.search);
+        }
+      } catch (e) {}
+    }
+    if (!state.worker) {
+      try {
+        var saved = JSON.parse(localStorage.getItem(LS_CFG) || "null");
+        if (saved && saved.worker) { state.name = saved.name || ""; state.worker = saved.worker; }
+      } catch (e) {}
+    }
+    if (!state.worker) { show("setup"); return; }
+
+    if (state.name) {
+      $("l-title").textContent = "Encuesta de salida \u00b7 " + state.name;
+      $("e-title").textContent = "Encuesta de salida \u00b7 " + state.name;
+    }
+
+    // Auto-login si hay credenciales recordadas
+    try {
+      var auth = JSON.parse(localStorage.getItem(LS_AUTH) || "null");
+      if (auth && auth.user && auth.pass) {
+        state.user = auth.user; state.pass = auth.pass;
+        $("l-user").value = auth.user;
+        api("GET").then(function (data) { openEditor(data.config); })
+        ["catch"](function () { show("login"); });
+        return;
+      }
+    } catch (e) {}
+    show("login");
+  })();
+})();
+</script>
+</body>
+</html>
