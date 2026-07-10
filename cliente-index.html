@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encuesta de salida · Resultados</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f1ec; color: #2b2622; min-height: 100vh;
+  }
+  .shell { max-width: 680px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 20px; margin-bottom: 2px; }
+  .sub { color: #8a7d6d; font-size: 13px; margin-bottom: 20px; }
+  .card {
+    background: #fffdfb; border: 1px solid #e7ded4; border-radius: 14px;
+    padding: 18px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: #a08f7d; margin-bottom: 12px; }
+  .bignums { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .bignum { text-align: center; padding: 8px 0; }
+  .bignum .n { font-size: 34px; font-weight: 700; }
+  .bignum .l { font-size: 12px; color: #8a7d6d; margin-top: 2px; }
+  .bar-row { margin-bottom: 12px; }
+  .bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; gap: 10px; }
+  .bar-top .lbl { flex: 1; }
+  .bar-top .val { color: #8a7d6d; flex: none; }
+  .bar-track { height: 10px; background: #f1eae1; border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #2b2622; border-radius: 999px; min-width: 4px; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { background: #f1eae1; border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+  .pill b { font-weight: 700; }
+  .comment { border-left: 3px solid #e7ded4; padding: 6px 12px; margin-bottom: 10px; }
+  .comment .c-date { font-size: 11px; color: #a08f7d; }
+  .comment .c-text { font-size: 14px; line-height: 1.4; }
+  .empty { font-size: 13px; color: #9b8d7c; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+  label:first-of-type { margin-top: 0; }
+  input[type="text"], input[type="password"] {
+    width: 100%; padding: 10px 12px; font-size: 14px; font-family: inherit;
+    border: 1px solid #e0d6ca; border-radius: 9px; background: #fff; color: #2b2622;
+  }
+  button {
+    font-family: inherit; cursor: pointer; border: 0; border-radius: 9px;
+    font-size: 14px; font-weight: 600; padding: 11px 16px;
+  }
+  .btn-primary { background: #2b2622; color: #fffdfb; width: 100%; }
+  .btn-primary:hover { background: #41382f; }
+  .btn-ghost { background: transparent; color: #8a7d6d; font-weight: 500; padding: 6px 8px; font-size: 13px; }
+  .btn-ghost:hover { color: #2b2622; }
+  .msg { padding: 11px 14px; border-radius: 9px; font-size: 13px; margin-bottom: 14px; display: none; }
+  .msg.err { display: block; background: #fbe9e7; color: #86261c; border: 1px solid #f2cfc9; }
+  .msg.ok { display: block; background: #e8f3e6; color: #295c26; border: 1px solid #cfe5cb; word-break: break-all; }
+  .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+  .hint { font-size: 12px; color: #9b8d7c; margin-top: 6px; }
+  #dash, #setup { display: none; }
+  .loading { text-align: center; color: #8a7d6d; font-size: 13px; padding: 30px 0; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── SETUP (uso interno Empuje) ──────────────────────── -->
+  <div id="setup">
+    <h1>Encuesta de salida · Configurar panel</h1>
+    <p class="sub">Uso interno de Empuje: cargá los datos del cliente y generale su link de acceso.</p>
+    <div class="card">
+      <div id="setup-msg" class="msg"></div>
+      <label for="s-name">Nombre del cliente</label>
+      <input type="text" id="s-name" placeholder="Top White">
+      <label for="s-exec">URL del Apps Script (/exec)</label>
+      <input type="text" id="s-exec" placeholder="https://script.google.com/macros/s/.../exec">
+      <label for="s-key">Clave del cliente (CLIENT_KEY del Apps Script)</label>
+      <input type="password" id="s-key">
+      <div style="margin-top:16px">
+        <button class="btn-primary" id="btn-genlink">Generar link del cliente</button>
+      </div>
+      <div id="link-out" class="msg"></div>
+      <p class="hint">El link incluye la clave: mandáselo al cliente por un canal privado (WhatsApp/email directo). Con abrirlo una vez, el panel queda configurado en su navegador.</p>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ───────────────────────────────────────── -->
+  <div id="dash">
+    <div class="topbar">
+      <div>
+        <h1 id="d-title">Encuesta de salida</h1>
+        <p class="sub" style="margin-bottom:0">Qué nos cuentan las personas que estuvieron a punto de comprar y no terminaron.</p>
+      </div>
+      <button class="btn-ghost" id="btn-refresh">↻ Actualizar</button>
+    </div>
+    <div id="dash-msg" class="msg"></div>
+    <div id="dash-loading" class="loading">Cargando resultados…</div>
+    <div id="dash-content" style="display:none">
+
+      <div class="card">
+        <div class="bignums">
+          <div class="bignum"><div class="n" id="m-total">—</div><div class="l">Respuestas totales</div></div>
+          <div class="bignum"><div class="n" id="m-30">—</div><div class="l">Últimos 30 días</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Qué las frenó de comprar</h2>
+        <div id="m-respuestas"></div>
+      </div>
+
+      <div class="card">
+        <h2>Desde dónde respondieron</h2>
+        <div class="pill-row" id="m-dispositivos"></div>
+      </div>
+
+      <div class="card">
+        <h2>Campañas con más respuestas</h2>
+        <div id="m-campanias"></div>
+        <p class="hint">Indica desde qué campaña venían las personas que dejaron su respuesta.</p>
+      </div>
+
+      <div class="card">
+        <h2>Respuestas por semana</h2>
+        <div id="m-semanal"></div>
+      </div>
+
+      <div class="card">
+        <h2>En sus palabras</h2>
+        <div id="m-comentarios"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "empuje_survey_client_panel";
+  var cfg = null;
+
+  function $(id) { return document.getElementById(id); }
+  function showMsg(el, text, kind) { el.textContent = text; el.className = "msg " + kind; }
+
+  function b64encode(obj) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+  function b64decode(str) {
+    return JSON.parse(decodeURIComponent(escape(atob(str))));
+  }
+
+  // ── Config: hash del link > localStorage > setup ─────────
+  function loadConfig() {
+    var h = location.hash || "";
+    if (h.indexOf("#c=") === 0) {
+      try {
+        cfg = b64decode(h.slice(3));
+        localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+        history.replaceState(null, "", location.pathname + location.search);
+        return;
+      } catch (e) {}
+    }
+    try { cfg = JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch (e) { cfg = null; }
+  }
+
+  function show(screen) {
+    $("setup").style.display = screen === "setup" ? "block" : "none";
+    $("dash").style.display = screen === "dash" ? "block" : "none";
+  }
+
+  // ── Setup (Empuje) ────────────────────────────────────────
+  $("btn-genlink").addEventListener("click", function () {
+    var name = $("s-name").value.trim();
+    var exec = $("s-exec").value.trim();
+    var key = $("s-key").value.trim();
+    if (!name || !exec || !key) { showMsg($("setup-msg"), "Completá los tres campos.", "err"); return; }
+    if (exec.indexOf("https://script.google.com/") !== 0 || exec.indexOf("/exec") === -1) {
+      showMsg($("setup-msg"), "La URL tiene que ser la /exec del Apps Script.", "err"); return;
+    }
+    $("setup-msg").className = "msg";
+    var link = location.origin + location.pathname + "#c=" + b64encode({ name: name, exec: exec, key: key });
+    showMsg($("link-out"), link, "ok");
+  });
+
+  // ── Dashboard ─────────────────────────────────────────────
+  function barList(container, counts, total) {
+    container.innerHTML = "";
+    var keys = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+    if (!keys.length) { container.innerHTML = '<p class="empty">Todavía no hay respuestas.</p>'; return; }
+    keys.forEach(function (k) {
+      var n = counts[k];
+      var pct = total ? Math.round((n / total) * 100) : 0;
+      var row = document.createElement("div");
+      row.className = "bar-row";
+      var top = document.createElement("div");
+      top.className = "bar-top";
+      var lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = k;
+      var val = document.createElement("span"); val.className = "val"; val.textContent = n + " (" + pct + "%)";
+      top.appendChild(lbl); top.appendChild(val);
+      var track = document.createElement("div"); track.className = "bar-track";
+      var fill = document.createElement("div"); fill.className = "bar-fill"; fill.style.width = pct + "%";
+      track.appendChild(fill);
+      row.appendChild(top); row.appendChild(track);
+      container.appendChild(row);
+    });
+  }
+
+  function renderDash(m) {
+    $("m-total").textContent = m.total;
+    $("m-30").textContent = m.ultimos30;
+
+    barList($("m-respuestas"), m.porRespuesta || {}, m.total);
+
+    var dv = $("m-dispositivos");
+    dv.innerHTML = "";
+    var disps = m.porDispositivo || {};
+    var dkeys = Object.keys(disps);
+    if (!dkeys.length) { dv.innerHTML = '<p class="empty">Sin datos todavía.</p>'; }
+    dkeys.forEach(function (k) {
+      var label = k === "mobile" ? "Celular" : (k === "desktop" ? "Computadora" : k);
+      var pill = document.createElement("span");
+      pill.className = "pill";
+      pill.innerHTML = "";
+      var b = document.createElement("b"); b.textContent = disps[k];
+      pill.appendChild(document.createTextNode(label + ": "));
+      pill.appendChild(b);
+      dv.appendChild(pill);
+    });
+
+    var camps = m.porCampania || {};
+    var ckeys = Object.keys(camps).sort(function (a, b) { return camps[b] - camps[a]; }).slice(0, 5);
+    var top = {};
+    ckeys.forEach(function (k) { top[k] = camps[k]; });
+    var ctotal = 0; ckeys.forEach(function (k) { ctotal += camps[k]; });
+    if (ckeys.length) barList($("m-campanias"), top, ctotal);
+    else $("m-campanias").innerHTML = '<p class="empty">Sin datos de campañas todavía.</p>';
+
+    var sm = $("m-semanal");
+    sm.innerHTML = "";
+    var weeks = m.semanal || [];
+    if (!weeks.length) { sm.innerHTML = '<p class="empty">Sin datos todavía.</p>'; }
+    else {
+      var max = 0;
+      weeks.forEach(function (w) { if (w.respuestas > max) max = w.respuestas; });
+      weeks.forEach(function (w) {
+        var row = document.createElement("div");
+        row.className = "bar-row";
+        var t = document.createElement("div"); t.className = "bar-top";
+        var l = document.createElement("span"); l.className = "lbl"; l.textContent = "Semana del " + w.semana;
+        var v = document.createElement("span"); v.className = "val"; v.textContent = w.respuestas;
+        t.appendChild(l); t.appendChild(v);
+        var tr = document.createElement("div"); tr.className = "bar-track";
+        var f = document.createElement("div"); f.className = "bar-fill";
+        f.style.width = (max ? Math.round((w.respuestas / max) * 100) : 0) + "%";
+        tr.appendChild(f);
+        row.appendChild(t); row.appendChild(tr);
+        sm.appendChild(row);
+      });
+    }
+
+    var cm = $("m-comentarios");
+    cm.innerHTML = "";
+    var comments = m.comentarios || [];
+    if (!comments.length) { cm.innerHTML = '<p class="empty">Todavía no dejaron comentarios escritos.</p>'; }
+    comments.forEach(function (c) {
+      var div = document.createElement("div");
+      div.className = "comment";
+      var d = document.createElement("div"); d.className = "c-date"; d.textContent = c.fecha;
+      var t = document.createElement("div"); t.className = "c-text"; t.textContent = c.texto;
+      div.appendChild(d); div.appendChild(t);
+      cm.appendChild(div);
+    });
+
+    $("dash-loading").style.display = "none";
+    $("dash-content").style.display = "block";
+  }
+
+  function fetchMetrics() {
+    $("dash-msg").className = "msg";
+    $("dash-content").style.display = "none";
+    $("dash-loading").style.display = "block";
+    fetch(cfg.exec + "?action=metrics&key=" + encodeURIComponent(cfg.key))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.result !== "ok") throw data;
+        renderDash(data);
+      })["catch"](function (err) {
+        $("dash-loading").style.display = "none";
+        var m = (err && err.message) ? err.message : "No se pudieron cargar los resultados. Probá actualizar en un rato.";
+        showMsg($("dash-msg"), m, "err");
+      });
+  }
+
+  $("btn-refresh").addEventListener("click", fetchMetrics);
+
+  // ── Init ──────────────────────────────────────────────────
+  loadConfig();
+  if (cfg && cfg.exec && cfg.key) {
+    $("d-title").textContent = "Encuesta de salida · " + (cfg.name || "");
+    show("dash");
+    fetchMetrics();
+  } else {
+    show("setup");
+  }
+})();
+</script>
+</body>
+</html>
