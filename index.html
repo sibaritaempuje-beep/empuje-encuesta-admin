@@ -121,7 +121,17 @@
     <div class="card">
       <p><b>Tiempo total: 40-60 min.</b> Esta guía asume que este admin y los paneles ya están desplegados en Vercel (si estás leyendo esto acá, lo están). Lo de abajo es lo que se repite por cada cliente.</p>
       <p>&#9888;&#65039; <b>Dos reglas de oro:</b> (1) No abrir los archivos del paquete con TextEdit (Mac): rompe las comillas y el código falla. Usar VS Code o abrir con Chrome y copiar. (2) Credenciales SIEMPRE nuevas por cliente, nunca reutilizar.</p>
-      <p><b>Archivos necesarios</b> (paquete <code>nivel2</code>): <code>apps-script-backend.js</code>, <code>worker-encuesta-bundle.js</code>, un seed de plantilla, <code>gtm-loader.html</code>.</p>
+      <p><b>No necesitás archivos externos:</b> todo el código se copia desde la sección "Archivos del sistema", acá abajo.</p>
+    </div>
+
+
+    <div class="card">
+      <h2>Archivos del sistema &mdash; copiar desde acá</h2>
+      <p style="font-size:13.5px">Todo el código necesario está embebido en este admin. Tocá "Copiar" y pegá donde indique cada paso. No hace falta ningún archivo externo.</p>
+      <div class="opt-row"><div style="flex:1;font-size:13.5px"><b>Apps Script</b> <span class="hint" style="display:inline">&mdash; se pega en el Sheet (Paso 2). Recordá poner la CLIENT_KEY.</span></div><button class="opt-btn" style="width:auto;padding:0 12px" data-src="src-apps">Copiar</button></div>
+      <div class="opt-row"><div style="flex:1;font-size:13.5px"><b>Worker de Cloudflare</b> <span class="hint" style="display:inline">&mdash; se pega en el editor del Worker (Paso 3). Idéntico para todos.</span></div><button class="opt-btn" style="width:auto;padding:0 12px" data-src="src-worker">Copiar</button></div>
+      <div class="opt-row"><div style="flex:1;font-size:13.5px"><b>Loader de GTM</b> <span class="hint" style="display:inline">&mdash; se pega en el tag de GTM (Paso 4). Reemplazar WORKER_URL.</span></div><button class="opt-btn" style="width:auto;padding:0 12px" data-src="src-loader">Copiar</button></div>
+      <div class="opt-row"><div style="flex:1;font-size:13.5px"><b>Plantilla de seed</b> <span class="hint" style="display:inline">&mdash; la config inicial para el KV (Paso 3). Editar todos los PEGAR_*.</span></div><button class="opt-btn" style="width:auto;padding:0 12px" data-src="src-seed">Copiar</button></div>
     </div>
 
     <details open>
@@ -155,7 +165,7 @@
       <summary><b>Paso 2</b> &mdash; Google Sheet + Apps Script (10 min)</summary>
       <ol>
         <li>Crear un Sheet: <code>Encuesta de salida &mdash; [Cliente]</code>.</li>
-        <li>Menú <b>Extensiones &rarr; Apps Script</b> &rarr; borrar el ejemplo &rarr; pegar TODO <code>apps-script-backend.js</code>.</li>
+        <li>Menú <b>Extensiones &rarr; Apps Script</b> &rarr; borrar el ejemplo &rarr; pegar TODO el código del <b>Apps Script</b> (botón Copiar en "Archivos del sistema", arriba).</li>
         <li>En la línea <code>var CLIENT_KEY = '...'</code> pegar la CLIENT_KEY del Paso 1. Guardar.</li>
         <li><b>Implementar &rarr; Nueva implementación</b> &rarr; engranaje &#9881; &rarr; <b>Aplicación web</b> &rarr; Ejecutar como: <b>Yo</b> &rarr; Acceso: <b>Cualquier usuario</b> (crítico) &rarr; Implementar &rarr; autorizar permisos.</li>
         <li>Copiar la URL que termina en <code>/exec</code>. A la ficha.</li>
@@ -170,9 +180,9 @@
       <ol>
         <li><b>Cuenta:</b> la del cliente si ya tiene (ej. por el quiz); si no, crear Gmail dedicado y cuenta Free en dash.cloudflare.com.</li>
         <li><b>KV:</b> menú lateral &rarr; Storage &amp; Databases &rarr; KV &rarr; Create a namespace &rarr; <code>[cliente]-encuesta-CONFIG</code>.</li>
-        <li><b>Armar el seed</b> (el paso con criterio): partir de un seed existente y editar: <code>endpoint</code> (la /exec del Paso 2 &mdash; olvido n°1), <code>question.options</code> (las objeciones DEL RUBRO de este cliente, definirlas con Claude), <code>checkoutButtonSelectors</code> y <code>cartSelectors</code> (inspeccionar el theme: click derecho sobre el botón de compra / contador del carrito &rarr; Inspeccionar &rarr; copiar la clase), <code>previewParam</code>, <code>storeDomain</code>, <code>branding</code>.</li>
+        <li><b>Armar el seed</b> (el paso con criterio): copiar la <b>Plantilla de seed</b> (botón en "Archivos del sistema") a un editor de texto y completar: <code>endpoint</code> (la /exec del Paso 2 &mdash; olvido n°1), <code>question.options</code> (las objeciones DEL RUBRO de este cliente, definirlas con Claude), <code>checkoutButtonSelectors</code> y <code>cartSelectors</code> (inspeccionar el theme: click derecho sobre el botón de compra / contador del carrito &rarr; Inspeccionar &rarr; copiar la clase), <code>previewParam</code>, <code>storeDomain</code>, <code>branding</code>.</li>
         <li><b>Cargar el seed:</b> entrar al namespace &rarr; pestaña KV Pairs &rarr; Add entry &rarr; Key: <code>config:default</code> (exacto) &rarr; Value: el JSON completo &rarr; Save.</li>
-        <li><b>Worker:</b> Compute (Workers) &rarr; Workers &amp; Pages &rarr; Create &rarr; Create Worker &rarr; nombre <code>[cliente]-encuesta</code> &rarr; Deploy &rarr; Edit code &rarr; borrar todo &rarr; pegar TODO <code>worker-encuesta-bundle.js</code> (idéntico para todos) &rarr; Deploy.</li>
+        <li><b>Worker:</b> Compute (Workers) &rarr; Workers &amp; Pages &rarr; Create &rarr; Create Worker &rarr; nombre <code>[cliente]-encuesta</code> &rarr; Deploy &rarr; Edit code &rarr; borrar todo &rarr; pegar TODO el código del <b>Worker</b> (botón Copiar en "Archivos del sistema") &rarr; Deploy.</li>
         <li><b>Binding:</b> Settings &rarr; Bindings &rarr; + Add &rarr; KV namespace &rarr; Variable name: <code>CONFIG</code> (exacto, mayúsculas) &rarr; el namespace del cliente &rarr; Save.</li>
         <li><b>Secret:</b> Settings &rarr; Variables and Secrets &rarr; + Add &rarr; Type: <b>Secret</b> &rarr; Name: <code>ADMIN_TOKEN</code> &rarr; Value: el token del Paso 1 &rarr; Save.</li>
         <li><b>Verificar:</b> <code>.../health</code> responde ok; <code>.../widget.js</code> muestra JS que empieza con <code>(function () {</code> y adentro (Ctrl+F) aparece la /exec del cliente. La URL del Worker a la ficha.</li>
@@ -183,7 +193,7 @@
     <details>
       <summary><b>Paso 4</b> &mdash; GTM: el loader (5 min + permiso de publish)</summary>
       <ol>
-        <li>Abrir <code>gtm-loader.html</code> &rarr; reemplazar <code>WORKER_URL</code> por la URL del Worker, sin barra final.</li>
+        <li>Copiar el <b>Loader de GTM</b> (botón en "Archivos del sistema") &rarr; reemplazar <code>WORKER_URL</code> por la URL del Worker, sin barra final.</li>
         <li>En el GTM del cliente: Etiquetas &rarr; Nueva &rarr; <b>HTML personalizado</b> &rarr; pegar &rarr; Activador: <b>All Pages</b> &rarr; nombrar <code>[Cliente] - Encuesta de salida (loader)</code> &rarr; Guardar.</li>
         <li>Si hay una versión vieja de la encuesta como tag gigante: pausarla o borrarla (si conviven, doble carga).</li>
         <li><b>Publicar</b> el contenedor (único publish que el sistema pide en su vida). Sin publish, se puede probar igual con Vista previa de Tag Assistant.</li>
@@ -639,6 +649,27 @@
   });
   $("btn-add-back").addEventListener("click", function () { show("clients"); });
   $("btn-show-guide").addEventListener("click", function () { show("guide"); });
+
+  // Botones "Copiar" de la guía (código embebido en textareas ocultas)
+  document.querySelectorAll("[data-src]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var ta = $(btn.getAttribute("data-src"));
+      var text = ta.value;
+      function done(ok) {
+        btn.textContent = ok ? "\u00a1Copiado!" : "Error";
+        setTimeout(function () { btn.textContent = "Copiar"; }, 2000);
+      }
+      function fallback() {
+        ta.style.display = "block"; ta.select();
+        try { document.execCommand("copy"); done(true); }
+        catch (e) { done(false); }
+        ta.style.display = "none";
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+      } else { fallback(); }
+    });
+  });
   $("btn-guide-back").addEventListener("click", function () { show("clients"); });
 
   $("btn-connect").addEventListener("click", function () {
@@ -751,5 +782,800 @@
   show("clients");
 })();
 </script>
+
+<textarea style="display:none" id="src-apps">/**
+ * TOP WHITE — Encuesta de salida
+ * Backend Apps Script (vinculado al Google Sheet)
+ *
+ * Recibe las respuestas del widget (vía POST) y las appendea como filas.
+ * No requiere servidor. Se administra desde el propio spreadsheet.
+ *
+ * IMPORTANTE: este script va PEGADO dentro del Sheet
+ * (Extensiones → Apps Script), no en un proyecto suelto.
+ */
+
+// Nombre de la pestaña donde se guardan las respuestas.
+var SHEET_NAME = 'Respuestas';
+
+// Clave de acceso del PANEL DEL CLIENTE (distinta del admin token del Worker).
+// Generar una por cliente (32+ caracteres aleatorios) y pegarla acá.
+var CLIENT_KEY = 'PEGAR_CLAVE_DEL_CLIENTE';
+
+// Encabezados de las columnas (se crean solos la primera vez).
+var HEADERS = [
+  'Fecha y hora',
+  'Respuesta',
+  'Texto libre',
+  'Dispositivo',
+  'Página',
+  'Carrito',
+  'UTM Source',
+  'UTM Medium',
+  'UTM Campaign',
+  'Origen'
+];
+
+/**
+ * Devuelve (o crea) la pestaña de respuestas, asegurando los encabezados.
+ */
+function getSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(HEADERS);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  } else {
+    // Migración: si se sumaron columnas nuevas (ej. "Origen"),
+    // completa la fila de encabezados sin tocar los datos.
+    var current = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+    if (current[HEADERS.length - 1] !== HEADERS[HEADERS.length - 1]) {
+      sheet.getRange(1, 1, 1, HEADERS.length)
+        .setValues([HEADERS])
+        .setFontWeight('bold');
+    }
+  }
+  return sheet;
+}
+
+/**
+ * Endpoint que recibe las respuestas del widget.
+ * El widget manda un POST con body JSON (content-type text/plain
+ * para evitar el preflight de CORS).
+ */
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000); // evita filas pisadas si entran 2 a la vez
+
+    var data = {};
+    if (e &amp;&amp; e.postData &amp;&amp; e.postData.contents) {
+      data = JSON.parse(e.postData.contents);
+    }
+
+    var sheet = getSheet_();
+    sheet.appendRow([
+      new Date(),
+      data.respuesta    || '',
+      data.texto_libre  || '',
+      data.dispositivo  || '',
+      data.pagina       || '',
+      data.carrito      || '',
+      data.utm_source   || '',
+      data.utm_medium   || '',
+      data.utm_campaign || '',
+      data.origen       || ''
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'error', message: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function json_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * GET:
+ *  - /exec                          → chequeo de vida
+ *  - /exec?action=metrics&amp;key=XXX   → métricas agregadas para el panel del cliente
+ */
+function doGet(e) {
+  var p = (e &amp;&amp; e.parameter) || {};
+  if (p.action === 'metrics') {
+    if (!CLIENT_KEY || CLIENT_KEY === 'PEGAR_CLAVE_DEL_CLIENTE' || p.key !== CLIENT_KEY) {
+      return json_({ result: 'error', message: 'Clave invalida' });
+    }
+    return json_(computeMetrics_());
+  }
+  return json_({ result: 'ok', status: 'vivo' });
+}
+
+/**
+ * Agrega las respuestas REALES (excluye las de preview y las pruebas viejas
+ * sin columna Origen) para el panel del cliente.
+ */
+function computeMetrics_() {
+  var sheet = getSheet_();
+  var rows = sheet.getDataRange().getValues();
+  var out = {
+    result: 'ok',
+    total: 0,
+    ultimos30: 0,
+    porRespuesta: {},
+    porDispositivo: {},
+    porCampania: {},
+    semanal: [],
+    comentarios: []
+  };
+  var now = Date.now();
+  var weekly = {};
+  var tz = Session.getScriptTimeZone();
+
+  for (var i = 1; i &lt; rows.length; i++) {
+    var r = rows[i];
+    if (String(r[9] || '').toLowerCase() !== 'real') continue;
+
+    out.total++;
+    var d = (r[0] instanceof Date) ? r[0] : new Date(r[0]);
+    var validDate = !isNaN(d.getTime());
+    if (validDate &amp;&amp; (now - d.getTime()) &lt;= 30 * 86400000) out.ultimos30++;
+
+    var resp = String(r[1] || 'Sin respuesta');
+    out.porRespuesta[resp] = (out.porRespuesta[resp] || 0) + 1;
+
+    var disp = String(r[3] || 'desconocido');
+    out.porDispositivo[disp] = (out.porDispositivo[disp] || 0) + 1;
+
+    var camp = String(r[8] || '').trim();
+    if (camp) out.porCampania[camp] = (out.porCampania[camp] || 0) + 1;
+
+    if (validDate) {
+      var monday = new Date(d);
+      var day = monday.getDay(); // 0=dom
+      monday.setDate(monday.getDate() - (day === 0 ? 6 : day - 1));
+      var wk = Utilities.formatDate(monday, tz, 'dd/MM');
+      var wkSort = Utilities.formatDate(monday, tz, 'yyyy-MM-dd');
+      weekly[wkSort] = weekly[wkSort] || { semana: wk, respuestas: 0 };
+      weekly[wkSort].respuestas++;
+    }
+
+    var txt = String(r[2] || '').trim();
+    if (txt) {
+      out.comentarios.push({
+        fecha: validDate ? Utilities.formatDate(d, tz, 'dd/MM/yyyy') : '',
+        texto: txt
+      });
+    }
+  }
+
+  out.semanal = Object.keys(weekly).sort().slice(-12).map(function (k) { return weekly[k]; });
+  out.comentarios = out.comentarios.slice(-20).reverse();
+  return out;
+}
+</textarea>
+<textarea style="display:none" id="src-worker">/**
+ * TOP WHITE — Encuesta de salida · Worker (Cloudflare)
+ *
+ * Sirve el widget de la encuesta con la configuración leída del KV,
+ * y expone endpoints de administración para editarla (protegidos por token).
+ *
+ * ENDPOINTS
+ *   GET  /health         → chequeo de vida
+ *   GET  /widget.js      → el widget listo para inyectar (config embebida)
+ *   GET  /admin/config   → devuelve la config actual        (X-Admin-Token)
+ *   PUT  /admin/config   → guarda la config nueva en el KV  (X-Admin-Token)
+ *
+ * BINDINGS REQUERIDOS (Settings del Worker)
+ *   KV namespace binding:  CONFIG  → namespace "topwhite-encuesta-CONFIG"
+ *   Secret:                ADMIN_TOKEN
+ *
+ * La config vive en el KV bajo la key "config:default".
+ * Las respuestas de la encuesta NO pasan por acá: van directo del widget
+ * al Apps Script (Google Sheet), cuya URL está en la config (campo endpoint).
+ */
+
+// ─────────────────────────────────────────────────────────────
+// Branding (colores) — editable por cliente desde el admin.
+// Si la config no trae branding, se usan estos defaults (Top White).
+// ─────────────────────────────────────────────────────────────
+const DEFAULT_BRANDING = {
+  background: '#fffdfb',
+  text: '#2b2622',
+  muted: '#a08f7d',
+  border: '#e7ded4',
+  buttonBackground: '#2b2622',
+  buttonText: '#fffdfb'
+};
+
+function buildCss(branding) {
+  const c = Object.assign({}, DEFAULT_BRANDING, branding || {});
+  return [
+    '.twxs-wrap, .twxs-wrap * { box-sizing: border-box; }',
+    '.twxs-wrap {',
+    '  position: fixed; z-index: 2147483000;',
+    '  left: 12px; right: 12px; bottom: 12px;',
+    '  max-width: 380px; margin: 0 auto;',
+    '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;',
+    '  background: ' + c.background + '; color: ' + c.text + ';',
+    '  border: 1px solid ' + c.border + '; border-radius: 16px;',
+    '  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);',
+    '  padding: 18px 18px 16px;',
+    '  transform: translateY(140%); opacity: 0;',
+    '  transition: transform .38s cubic-bezier(.22,.61,.36,1), opacity .3s ease;',
+    '}',
+    '@media (min-width: 640px) { .twxs-wrap { left: auto; right: 22px; bottom: 22px; margin: 0; } }',
+    '.twxs-wrap.twxs-in { transform: translateY(0); opacity: 1; }',
+    '.twxs-close { position: absolute; top: 8px; right: 10px; width: 32px; height: 32px; border: 0; background: transparent; font-size: 22px; line-height: 1; color: ' + c.muted + '; cursor: pointer; border-radius: 8px; }',
+    '.twxs-close:hover { color: ' + c.text + '; }',
+    '.twxs-title { font-size: 13px; letter-spacing: .02em; color: ' + c.muted + '; margin: 0 26px 2px 0; }',
+    '.twxs-q { font-size: 17px; font-weight: 600; line-height: 1.3; margin: 0 0 14px; }',
+    '.twxs-opts { display: flex; flex-direction: column; gap: 8px; }',
+    '.twxs-opt { width: 100%; min-height: 46px; text-align: left; padding: 12px 14px; border: 1px solid ' + c.border + '; background: ' + c.background + '; border-radius: 11px; font-size: 15px; color: ' + c.text + '; cursor: pointer; transition: border-color .15s ease, opacity .15s ease; }',
+    '.twxs-opt:hover { border-color: ' + c.buttonBackground + '; }',
+    '.twxs-opt:active { opacity: .75; }',
+    '.twxs-extra { display: none; margin-top: 12px; }',
+    '.twxs-extra.twxs-show { display: block; }',
+    '.twxs-extra textarea { width: 100%; min-height: 64px; resize: vertical; border: 1px solid ' + c.border + '; border-radius: 11px; padding: 10px 12px; font-size: 15px; font-family: inherit; color: ' + c.text + '; background: ' + c.background + '; }',
+    '.twxs-send { margin-top: 10px; width: 100%; min-height: 46px; border: 0; border-radius: 11px; background: ' + c.buttonBackground + '; color: ' + c.buttonText + '; font-size: 15px; font-weight: 600; cursor: pointer; }',
+    '.twxs-send:hover { opacity: .9; }',
+    '.twxs-thanks { text-align: center; padding: 8px 4px 6px; }',
+    '.twxs-thanks .twxs-t-msg { font-size: 16px; font-weight: 600; margin-top: 6px; }'
+  ].join('\n');
+}
+
+// ─────────────────────────────────────────────────────────────
+// Lógica del widget (ES5, corre en el navegador del visitante).
+// Espera dos variables ya definidas: CONFIG (objeto) y CSS_TEXT (string).
+// ─────────────────────────────────────────────────────────────
+const WIDGET_LOGIC = [
+'  if (window.__twExitSurveyLoaded) return;',
+'  window.__twExitSurveyLoaded = true;',
+'',
+'  var QUESTION = CONFIG.question || {};',
+'  var THANKS = CONFIG.thanksMessage || "\\u00a1Gracias! Tu respuesta nos ayuda un mont\\u00f3n.";',
+'',
+'  // Inyectar estilos',
+'  var st = document.createElement("style");',
+'  st.textContent = CSS_TEXT;',
+'  (document.head || document.documentElement).appendChild(st);',
+'',
+'  // Claves de estado',
+'  var LS_KEY       = "tw_exit_survey_state";',
+'  var SS_SHOWN     = "tw_exit_survey_shown_session";',
+'  var SS_UTMS      = "tw_exit_survey_utms";',
+'  var SS_SESSION   = "tw_exit_survey_session_start";',
+'  var SS_CHECKOUT  = "tw_exit_survey_checkout_started";',
+'  var SS_PURCHASED = "tw_exit_survey_purchased";',
+'',
+'  function isPreview() {',
+'    try {',
+'      return new URLSearchParams(location.search).get(CONFIG.previewParam) === CONFIG.previewValue;',
+'    } catch (e) { return false; }',
+'  }',
+'  var preview = isPreview();',
+'',
+'  function isMobile() {',
+'    return window.matchMedia &amp;&amp; window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;',
+'  }',
+'',
+'  function getLS() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch (e) { return {}; } }',
+'  function setLS(o) { try { localStorage.setItem(LS_KEY, JSON.stringify(o)); } catch (e) {} }',
+'  function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }',
+'  function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }',
+'',
+'  if (!ssGet(SS_SESSION)) ssSet(SS_SESSION, String(Date.now()));',
+'  function secondsOnSite() {',
+'    var start = parseInt(ssGet(SS_SESSION) || String(Date.now()), 10);',
+'    return (Date.now() - start) / 1000;',
+'  }',
+'',
+'  function withinFrequency() {',
+'    var s = getLS();',
+'    if (!s.lastShown) return false;',
+'    return (Date.now() - s.lastShown) / 86400000 &lt; CONFIG.frequencyDays;',
+'  }',
+'',
+'  function urlHas(hints) {',
+'    var u = (location.pathname + location.search).toLowerCase();',
+'    for (var i = 0; i &lt; (hints || []).length; i++) { if (u.indexOf(hints[i]) !== -1) return true; }',
+'    return false;',
+'  }',
+'  function isThankYouPage() { return urlHas(CONFIG.thankYouHints); }',
+'  function isCheckoutPage() { return !isThankYouPage() &amp;&amp; urlHas(CONFIG.checkoutPathHints); }',
+'',
+'  function checkoutStarted() { return ssGet(SS_CHECKOUT) === "1"; }',
+'  function markCheckout() { ssSet(SS_CHECKOUT, "1"); maybeArmMobile(); }',
+'',
+'  if (isCheckoutPage()) markCheckout();',
+'  if (isThankYouPage()) ssSet(SS_PURCHASED, "1");',
+'',
+'  document.addEventListener("click", function (e) {',
+'    var el = e.target;',
+'    var sels = CONFIG.checkoutButtonSelectors || [];',
+'    var hints = CONFIG.checkoutButtonTextHints || [];',
+'    while (el &amp;&amp; el !== document.body) {',
+'      for (var i = 0; i &lt; sels.length; i++) {',
+'        try { if (el.matches &amp;&amp; el.matches(sels[i])) { markCheckout(); return; } } catch (err) {}',
+'      }',
+'      var txt = (el.textContent || "").trim().toLowerCase();',
+'      if (txt &amp;&amp; txt.length &lt; 40) {',
+'        for (var j = 0; j &lt; hints.length; j++) {',
+'          if (txt.indexOf(hints[j]) !== -1) { markCheckout(); return; }',
+'        }',
+'      }',
+'      el = el.parentElement;',
+'    }',
+'  }, true);',
+'',
+'  function cartInfo() {',
+'    try { if (window.LS &amp;&amp; LS.cart &amp;&amp; LS.cart.items &amp;&amp; LS.cart.items.length &gt; 0) return "si"; } catch (e) {}',
+'    var sels = CONFIG.cartSelectors || [];',
+'    for (var i = 0; i &lt; sels.length; i++) {',
+'      var el = document.querySelector(sels[i]);',
+'      if (el) {',
+'        var n = parseInt((el.textContent || el.getAttribute("data-cart-items") || "0").replace(/\\D/g, ""), 10);',
+'        if (!isNaN(n)) return n &gt; 0 ? "si" : "no";',
+'      }',
+'    }',
+'    return "desconocido";',
+'  }',
+'',
+'  function captureUtms() {',
+'    try {',
+'      var p = new URLSearchParams(location.search);',
+'      var existing = JSON.parse(ssGet(SS_UTMS) || "null");',
+'      var fresh = {',
+'        utm_source: p.get("utm_source") || "",',
+'        utm_medium: p.get("utm_medium") || "",',
+'        utm_campaign: p.get("utm_campaign") || ""',
+'      };',
+'      if (fresh.utm_source || fresh.utm_medium || fresh.utm_campaign) {',
+'        ssSet(SS_UTMS, JSON.stringify(fresh));',
+'        return fresh;',
+'      }',
+'      return existing || fresh;',
+'    } catch (e) { return { utm_source: "", utm_medium: "", utm_campaign: "" }; }',
+'  }',
+'  var utms = captureUtms();',
+'',
+'  function beacon(body) {',
+'    try {',
+'      if (navigator.sendBeacon)',
+'        navigator.sendBeacon(CONFIG.endpoint, new Blob([body], { type: "text/plain;charset=UTF-8" }));',
+'    } catch (e) {}',
+'  }',
+'  function send(payload) {',
+'    try {',
+'      window.dataLayer = window.dataLayer || [];',
+'      window.dataLayer.push({',
+'        event: "exit_survey_response",',
+'        encuesta_respuesta: payload.respuesta,',
+'        encuesta_dispositivo: payload.dispositivo,',
+'        encuesta_origen: payload.origen',
+'      });',
+'    } catch (e) {}',
+'    var body = JSON.stringify(payload);',
+'    try {',
+'      fetch(CONFIG.endpoint, {',
+'        method: "POST", mode: "no-cors", keepalive: true,',
+'        headers: { "Content-Type": "text/plain;charset=UTF-8" }, body: body',
+'      })["catch"](function () { beacon(body); });',
+'    } catch (e) { beacon(body); }',
+'  }',
+'',
+'  var shown = false;',
+'',
+'  function buildPayload(respuesta, texto) {',
+'    return {',
+'      respuesta: respuesta,',
+'      texto_libre: texto || "",',
+'      dispositivo: isMobile() ? "mobile" : "desktop",',
+'      pagina: location.pathname + location.search,',
+'      carrito: cartInfo(),',
+'      utm_source: utms.utm_source, utm_medium: utms.utm_medium, utm_campaign: utms.utm_campaign,',
+'      origen: preview ? "preview" : "real"',
+'    };',
+'  }',
+'  function markResponded() { if (preview) return; var s = getLS(); s.responded = true; s.lastShown = Date.now(); setLS(s); }',
+'  function markDismissed() { if (preview) return; var s = getLS(); s.dismissed = true; s.lastShown = Date.now(); setLS(s); }',
+'',
+'  function closeW(wrap) {',
+'    wrap.classList.remove("twxs-in");',
+'    setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 420);',
+'  }',
+'  function thankYou(wrap) {',
+'    wrap.innerHTML = \'&lt;div class="twxs-thanks"&gt;&lt;div class="twxs-t-msg"&gt;&lt;/div&gt;&lt;/div&gt;\';',
+'    wrap.querySelector(".twxs-t-msg").textContent = THANKS;',
+'    setTimeout(function () { closeW(wrap); }, 1800);',
+'  }',
+'',
+'  function render() {',
+'    if (shown) return;',
+'    shown = true;',
+'    ssSet(SS_SHOWN, "1");',
+'',
+'    var wrap = document.createElement("div");',
+'    wrap.className = "twxs-wrap";',
+'    wrap.setAttribute("role", "dialog");',
+'    wrap.setAttribute("aria-label", QUESTION.text || "");',
+'',
+'    var opts = QUESTION.options || [];',
+'    var optsHtml = "";',
+'    for (var i = 0; i &lt; opts.length; i++) {',
+'      optsHtml += \'&lt;button type="button" class="twxs-opt" data-opt="\' + i + \'"&gt;&lt;/button&gt;\';',
+'    }',
+'',
+'    wrap.innerHTML =',
+'      \'&lt;button type="button" class="twxs-close" aria-label="Cerrar"&gt;\\u00d7&lt;/button&gt;\' +',
+'      \'&lt;p class="twxs-title"&gt;&lt;/p&gt;\' +',
+'      \'&lt;h3 class="twxs-q"&gt;&lt;/h3&gt;\' +',
+'      \'&lt;div class="twxs-opts"&gt;\' + optsHtml + \'&lt;/div&gt;\' +',
+'      \'&lt;div class="twxs-extra"&gt;\' +',
+'        \'&lt;textarea placeholder="Contanos un poquito m\\u00e1s (opcional)"&gt;&lt;/textarea&gt;\' +',
+'        \'&lt;button type="button" class="twxs-send"&gt;Enviar&lt;/button&gt;\' +',
+'      \'&lt;/div&gt;\';',
+'',
+'    wrap.querySelector(".twxs-title").textContent = QUESTION.title || "";',
+'    wrap.querySelector(".twxs-q").textContent = QUESTION.text || "";',
+'    var optBtns = wrap.querySelectorAll(".twxs-opt");',
+'    for (var k = 0; k &lt; optBtns.length; k++) optBtns[k].textContent = opts[k];',
+'',
+'    document.body.appendChild(wrap);',
+'    requestAnimationFrame(function () { wrap.classList.add("twxs-in"); });',
+'',
+'    var extra = wrap.querySelector(".twxs-extra");',
+'    var textarea = wrap.querySelector("textarea");',
+'',
+'    wrap.querySelector(".twxs-close").addEventListener("click", function () { markDismissed(); closeW(wrap); });',
+'',
+'    function onOpt(btn) {',
+'      btn.addEventListener("click", function () {',
+'        var label = opts[parseInt(btn.getAttribute("data-opt"), 10)];',
+'        if (label === QUESTION.openTrigger) {',
+'          extra.classList.add("twxs-show");',
+'          wrap.querySelector(".twxs-opts").style.display = "none";',
+'          wrap.querySelector(".twxs-q").textContent = "Contanos, \\u00bfqu\\u00e9 pas\\u00f3?";',
+'          textarea.focus();',
+'        } else {',
+'          send(buildPayload(label, "")); markResponded(); thankYou(wrap);',
+'        }',
+'      });',
+'    }',
+'    for (var m = 0; m &lt; optBtns.length; m++) onOpt(optBtns[m]);',
+'',
+'    wrap.querySelector(".twxs-send").addEventListener("click", function () {',
+'      send(buildPayload(QUESTION.openTrigger, textarea.value.trim())); markResponded(); thankYou(wrap);',
+'    });',
+'  }',
+'',
+'  function eligible() {',
+'    if (preview) return true;',
+'    if (ssGet(SS_PURCHASED) === "1") return false;',
+'    if (isThankYouPage()) return false;',
+'    if (getLS().responded) return false;',
+'    if (withinFrequency()) return false;',
+'    if (ssGet(SS_SHOWN) === "1") return false;',
+'    if (!checkoutStarted()) return false;',
+'    if (secondsOnSite() &lt; CONFIG.minSeconds) return false;',
+'    return true;',
+'  }',
+'',
+'  function tryShow() { if (!shown &amp;&amp; eligible()) render(); }',
+'',
+'  var mobileArmed = false;',
+'',
+'  function maybeArmMobile() {',
+'    if (mobileArmed || !isMobile()) return;',
+'    if (!preview &amp;&amp; !checkoutStarted()) return;',
+'    mobileArmed = true;',
+'    try { history.pushState({ tw: 1 }, "", location.href); } catch (e) {}',
+'    window.addEventListener("popstate", function () {',
+'      tryShow();',
+'      if (!shown) { try { history.pushState({ tw: 1 }, "", location.href); } catch (e) {} }',
+'    });',
+'  }',
+'',
+'  if (!isMobile()) {',
+'    document.addEventListener("mouseleave", function (e) { if (e.clientY &lt;= 0) tryShow(); });',
+'  }',
+'',
+'  maybeArmMobile();',
+'',
+'  (function returnedFromCheckout() {',
+'    var ref = (document.referrer || "").toLowerCase();',
+'    var came = ref.indexOf("checkout") !== -1 || ref.indexOf("/comprar") !== -1;',
+'    if (preview || (came &amp;&amp; checkoutStarted())) {',
+'      setTimeout(tryShow, preview ? 0 : 2500);',
+'    }',
+'  })();'
+].join('\n');
+
+// ─────────────────────────────────────────────────────────────
+// Armado del widget final (config embebida en el momento del request)
+// ─────────────────────────────────────────────────────────────
+export function buildWidget(cfg) {
+  return '(function () {\n"use strict";\nvar CONFIG = ' + JSON.stringify(cfg) +
+    ';\nvar CSS_TEXT = ' + JSON.stringify(buildCss(cfg.branding)) + ';\n' +
+    WIDGET_LOGIC + '\n})();\n';
+}
+
+// ─────────────────────────────────────────────────────────────
+// Helpers HTTP
+// ─────────────────────────────────────────────────────────────
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token, X-Client-User, X-Client-Pass'
+};
+
+function json(data, status) {
+  return new Response(JSON.stringify(data), {
+    status: status || 200,
+    headers: Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, CORS)
+  });
+}
+
+function js(code, maxAge) {
+  return new Response(code, {
+    headers: Object.assign({
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'Cache-Control': 'public, max-age=' + (maxAge || 120)
+    }, CORS)
+  });
+}
+
+// Validación mínima de la config que llega por PUT.
+function validateConfig(cfg) {
+  const errors = [];
+  if (typeof cfg !== 'object' || cfg === null) return ['La config debe ser un objeto JSON.'];
+  if (typeof cfg.endpoint !== 'string' || cfg.endpoint.indexOf('https://') !== 0)
+    errors.push('endpoint debe ser una URL https (la /exec del Apps Script).');
+  if (typeof cfg.minSeconds !== 'number' || cfg.minSeconds &lt; 0)
+    errors.push('minSeconds debe ser un numero &gt;= 0.');
+  if (typeof cfg.frequencyDays !== 'number' || cfg.frequencyDays &lt; 0)
+    errors.push('frequencyDays debe ser un numero &gt;= 0.');
+  if (!cfg.question || typeof cfg.question.text !== 'string' || !cfg.question.text)
+    errors.push('question.text es obligatorio.');
+  if (!cfg.question || !Array.isArray(cfg.question.options) || cfg.question.options.length &lt; 2)
+    errors.push('question.options debe tener al menos 2 opciones.');
+  if (cfg.branding &amp;&amp; (typeof cfg.branding !== 'object' || Array.isArray(cfg.branding)))
+    errors.push('branding debe ser un objeto de colores.');
+  return errors;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Acceso del CLIENTE (editor limitado)
+// Credenciales en KV bajo "auth:client" como { user, passHash }.
+// El cliente SOLO puede tocar estos campos; el resto se preserva
+// server-side aunque el request intente mandarlos.
+// ─────────────────────────────────────────────────────────────
+const CLIENT_FIELDS = ['enabled', 'minSeconds', 'frequencyDays', 'thanksMessage', 'question', 'branding'];
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b =&gt; b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkClientAuth(request, env) {
+  const user = request.headers.get('X-Client-User') || '';
+  const pass = request.headers.get('X-Client-Pass') || '';
+  if (!user || !pass) return false;
+  const raw = await env.CONFIG.get('auth:client');
+  if (!raw) return false;
+  let a;
+  try { a = JSON.parse(raw); } catch (e) { return false; }
+  if (!a.user || !a.passHash || user !== a.user) return false;
+  return (await sha256(pass)) === a.passHash;
+}
+
+function pickClientConfig(cfg) {
+  const out = {};
+  CLIENT_FIELDS.forEach(function (k) { out[k] = cfg[k]; });
+  // Datos de solo lectura para armar el link de preview en el editor:
+  out.storeDomain = cfg.storeDomain || '';
+  out.previewParam = cfg.previewParam || 'tw_survey';
+  out.previewValue = cfg.previewValue || 'preview';
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Router
+// ─────────────────────────────────────────────────────────────
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS });
+    }
+
+    if (path === '/health') {
+      return json({ result: 'ok', service: 'topwhite-encuesta' });
+    }
+
+    if (path === '/widget.js' &amp;&amp; request.method === 'GET') {
+      const raw = await env.CONFIG.get('config:default');
+      if (!raw) return js('/* encuesta: sin config en KV (falta seed en config:default) */', 60);
+      let cfg;
+      try { cfg = JSON.parse(raw); }
+      catch (e) { return js('/* encuesta: config invalida en KV */', 60); }
+      if (cfg.enabled === false) return js('/* encuesta desactivada desde el admin */', 60);
+      return js(buildWidget(cfg));
+    }
+
+    if (path.indexOf('/admin/') === 0) {
+      const token = request.headers.get('X-Admin-Token') || '';
+      if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+        return json({ result: 'error', message: 'No autorizado' }, 401);
+      }
+
+      if (path === '/admin/config' &amp;&amp; request.method === 'GET') {
+        const raw = await env.CONFIG.get('config:default');
+        return json({ result: 'ok', config: raw ? JSON.parse(raw) : null });
+      }
+
+      if (path === '/admin/config' &amp;&amp; request.method === 'PUT') {
+        let cfg;
+        try { cfg = await request.json(); }
+        catch (e) { return json({ result: 'error', message: 'Body JSON invalido' }, 400); }
+        const errors = validateConfig(cfg);
+        if (errors.length) return json({ result: 'error', errors: errors }, 400);
+        await env.CONFIG.put('config:default', JSON.stringify(cfg));
+        return json({ result: 'ok', saved: true });
+      }
+
+      if (path === '/admin/client-auth' &amp;&amp; request.method === 'GET') {
+        const raw = await env.CONFIG.get('auth:client');
+        let user = null;
+        if (raw) { try { user = JSON.parse(raw).user || null; } catch (e) {} }
+        return json({ result: 'ok', user: user });
+      }
+
+      if (path === '/admin/client-auth' &amp;&amp; request.method === 'PUT') {
+        let body;
+        try { body = await request.json(); }
+        catch (e) { return json({ result: 'error', message: 'Body JSON invalido' }, 400); }
+        const user = String(body.user || '').trim();
+        const pass = String(body.pass || '');
+        if (user.length &lt; 3) return json({ result: 'error', message: 'El usuario debe tener al menos 3 caracteres.' }, 400);
+        if (pass.length &lt; 8) return json({ result: 'error', message: 'La clave debe tener al menos 8 caracteres.' }, 400);
+        await env.CONFIG.put('auth:client', JSON.stringify({ user: user, passHash: await sha256(pass) }));
+        return json({ result: 'ok', saved: true, user: user });
+      }
+
+      if (path === '/admin/client-auth' &amp;&amp; request.method === 'DELETE') {
+        await env.CONFIG.delete('auth:client');
+        return json({ result: 'ok', deleted: true });
+      }
+
+      return json({ result: 'error', message: 'Ruta admin desconocida' }, 404);
+    }
+
+    // ── Rutas del CLIENTE (editor limitado) ──────────────────
+    if (path === '/client/config') {
+      const authed = await checkClientAuth(request, env);
+      if (!authed) return json({ result: 'error', message: 'Usuario o clave incorrectos' }, 401);
+
+      const raw = await env.CONFIG.get('config:default');
+      if (!raw) return json({ result: 'error', message: 'Sin config cargada' }, 404);
+      let cfg;
+      try { cfg = JSON.parse(raw); }
+      catch (e) { return json({ result: 'error', message: 'Config invalida en KV' }, 500); }
+
+      if (request.method === 'GET') {
+        return json({ result: 'ok', config: pickClientConfig(cfg) });
+      }
+
+      if (request.method === 'PUT') {
+        let body;
+        try { body = await request.json(); }
+        catch (e) { return json({ result: 'error', message: 'Body JSON invalido' }, 400); }
+        // Merge server-side: SOLO los campos permitidos pisan la config.
+        CLIENT_FIELDS.forEach(function (k) {
+          if (body[k] !== undefined) cfg[k] = body[k];
+        });
+        const errors = validateConfig(cfg);
+        if (errors.length) return json({ result: 'error', errors: errors }, 400);
+        await env.CONFIG.put('config:default', JSON.stringify(cfg));
+        return json({ result: 'ok', saved: true });
+      }
+
+      return json({ result: 'error', message: 'Metodo no permitido' }, 405);
+    }
+
+    if (path === '/') {
+      return new Response('topwhite-encuesta worker · endpoints: /health /widget.js /admin/config', {
+        headers: Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, CORS)
+      });
+    }
+
+    return json({ result: 'error', message: 'Not found' }, 404);
+  }
+};
+</textarea>
+<textarea style="display:none" id="src-loader">&lt;!--
+  ENCUESTA DE SALIDA — Loader para GTM
+  Pegar en un tag "HTML personalizado". Trigger: All Pages (o DOM Ready).
+
+  ANTES DE GUARDAR: reemplazar WORKER_URL por la URL real del Worker
+  del cliente, SIN barra final. Ejemplo:
+    https://topwhite-encuesta.xxxx.workers.dev
+
+  Este tag se publica UNA sola vez. Todos los cambios futuros de la
+  encuesta (preguntas, criterios, colores, on/off) se hacen desde el
+  admin, sin tocar GTM.
+--&gt;
+&lt;script&gt;
+(function () {
+  try {
+    if (window.__twExitSurveyLoaderDone) { return; }
+    window.__twExitSurveyLoaderDone = true;
+    var s = document.createElement('script');
+    s.src = 'WORKER_URL/widget.js';
+    s.async = true;
+    (document.head || document.documentElement).appendChild(s);
+  } catch (e) {}
+})();
+&lt;/script&gt;
+</textarea>
+<textarea style="display:none" id="src-seed">{
+  "enabled": true,
+  "endpoint": "PEGAR_URL_EXEC_DEL_APPS_SCRIPT",
+  "minSeconds": 45,
+  "frequencyDays": 30,
+  "previewParam": "PEGAR_PREFIJO_survey",
+  "previewValue": "preview",
+  "checkoutPathHints": ["/checkout", "/comprar", "finalizar-compra"],
+  "checkoutButtonSelectors": [
+    ".js-cart-go-to-checkout",
+    "[data-checkout]",
+    "a[href*='checkout']",
+    "button[href*='checkout']",
+    "a[href*='/comprar']"
+  ],
+  "checkoutButtonTextHints": ["iniciar compra", "finalizar compra", "ir a pagar", "comprar ahora"],
+  "thankYouHints": ["gracias", "/success", "checkout/success", "comprado", "thank", "pedido-realizado"],
+  "cartSelectors": [".js-cart-widget-amount", ".js-cart-item-count", "[data-cart-items]", ".cart-count"],
+  "branding": {
+    "background": "#fffdfb",
+    "text": "#2b2622",
+    "muted": "#a08f7d",
+    "border": "#e7ded4",
+    "buttonBackground": "#2b2622",
+    "buttonText": "#fffdfb"
+  },
+  "storeDomain": "PEGAR_DOMINIO_DE_LA_TIENDA",
+  "question": {
+    "title": "Antes de irte…",
+    "text": "¿Qué te frenó de comprar hoy?",
+    "options": [
+      "Tenía dudas con el talle o el calce",
+      "El precio / lo estoy pensando",
+      "No encontré mi talle o color",
+      "Estoy comparando, vuelvo después",
+      "Dudas con el envío o las formas de pago",
+      "Otra cosa"
+    ],
+    "openTrigger": "Otra cosa"
+  },
+  "thanksMessage": "¡Gracias! Tu respuesta nos ayuda un montón."
+}
+</textarea>
 </body>
 </html>
