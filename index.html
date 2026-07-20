@@ -84,6 +84,9 @@
       <div style="margin-top:12px">
         <button class="btn-primary" id="btn-show-add">+ Agregar cliente</button>
       </div>
+      <div style="margin-top:8px; text-align:center">
+        <button class="btn-ghost" id="btn-show-guide">&#128214; Guía: dar de alta un cliente nuevo</button>
+      </div>
     </div>
   </div>
 
@@ -106,6 +109,124 @@
       </div>
       <p class="hint" style="margin-top:8px">Se guarda solo en este navegador (localStorage). El token nunca viaja a Vercel.</p>
     </div>
+  </div>
+
+
+  <!-- ── PANTALLA: GUÍA DE ALTA ──────────────────────────── -->
+  <div id="screen-guide">
+    <div class="topbar">
+      <h1>Dar de alta un cliente nuevo</h1>
+      <button class="btn-ghost" id="btn-guide-back">&#8592; Volver</button>
+    </div>
+    <div class="card">
+      <p><b>Tiempo total: 40-60 min.</b> Esta guía asume que este admin y los paneles ya están desplegados en Vercel (si estás leyendo esto acá, lo están). Lo de abajo es lo que se repite por cada cliente.</p>
+      <p>&#9888;&#65039; <b>Dos reglas de oro:</b> (1) No abrir los archivos del paquete con TextEdit (Mac): rompe las comillas y el código falla. Usar VS Code o abrir con Chrome y copiar. (2) Credenciales SIEMPRE nuevas por cliente, nunca reutilizar.</p>
+      <p><b>Archivos necesarios</b> (paquete <code>nivel2</code>): <code>apps-script-backend.js</code>, <code>worker-encuesta-bundle.js</code>, un seed de plantilla, <code>gtm-loader.html</code>.</p>
+    </div>
+
+    <details open>
+      <summary><b>Ficha del cliente</b> (completá esto a medida que avanzás)</summary>
+      <table class="guide-table">
+        <tr><th>Dato</th><th>Se obtiene en</th></tr>
+        <tr><td>Dominio de la tienda</td><td>&mdash;</td></tr>
+        <tr><td>URL del Google Sheet</td><td>Paso 2</td></tr>
+        <tr><td>URL /exec del Apps Script</td><td>Paso 2</td></tr>
+        <tr><td>CLIENT_KEY (métricas)</td><td>Paso 1</td></tr>
+        <tr><td>Cuenta Cloudflare (mail)</td><td>Paso 3</td></tr>
+        <tr><td>URL del Worker</td><td>Paso 3</td></tr>
+        <tr><td>ADMIN_TOKEN</td><td>Paso 1</td></tr>
+        <tr><td>Parámetro de preview</td><td>Paso 1</td></tr>
+        <tr><td>Usuario/clave editor (si aplica)</td><td>Paso 8</td></tr>
+      </table>
+      <p class="hint">Guardar la ficha completa donde Empuje guarda credenciales de clientes.</p>
+    </details>
+
+    <details>
+      <summary><b>Paso 1</b> &mdash; Generar credenciales (2 min)</summary>
+      <ol>
+        <li><b>ADMIN_TOKEN</b>: 40+ caracteres aleatorios (llave maestra del Worker, interna Empuje).</li>
+        <li><b>CLIENT_KEY</b>: 32+ caracteres aleatorios (solo-lectura de métricas).</li>
+        <li><b>Parámetro de preview</b>: prefijo propio, ej. La Planchetta &rarr; <code>lp_survey</code>.</li>
+      </ol>
+      <p>Pedírselas a Claude ("generame un admin token y una client key para [cliente]") o usar un generador de contraseñas. Anotarlas en la ficha YA.</p>
+    </details>
+
+    <details>
+      <summary><b>Paso 2</b> &mdash; Google Sheet + Apps Script (10 min)</summary>
+      <ol>
+        <li>Crear un Sheet: <code>Encuesta de salida &mdash; [Cliente]</code>.</li>
+        <li>Menú <b>Extensiones &rarr; Apps Script</b> &rarr; borrar el ejemplo &rarr; pegar TODO <code>apps-script-backend.js</code>.</li>
+        <li>En la línea <code>var CLIENT_KEY = '...'</code> pegar la CLIENT_KEY del Paso 1. Guardar.</li>
+        <li><b>Implementar &rarr; Nueva implementación</b> &rarr; engranaje &#9881; &rarr; <b>Aplicación web</b> &rarr; Ejecutar como: <b>Yo</b> &rarr; Acceso: <b>Cualquier usuario</b> (crítico) &rarr; Implementar &rarr; autorizar permisos.</li>
+        <li>Copiar la URL que termina en <code>/exec</code>. A la ficha.</li>
+        <li><b>Verificar en incógnito:</b> la URL /exec debe responder <code>{"result":"ok","status":"vivo"}</code>. Si pide login de Google &rarr; el acceso quedó en "Solo yo": corregir con Administrar implementaciones &rarr; lápiz &rarr; Nueva versión.</li>
+        <li>Verificar métricas: <code>/exec?action=metrics&amp;key=LA_CLIENT_KEY</code> &rarr; <code>{"result":"ok","total":0,...}</code>.</li>
+      </ol>
+      <p>&#128260; Ediciones futuras del script: siempre <b>"Nueva VERSIÓN"</b> sobre la implementación existente. Nunca "Nueva implementación" (cambia la URL y rompe todo).</p>
+    </details>
+
+    <details>
+      <summary><b>Paso 3</b> &mdash; Cloudflare: Worker + KV (15 min)</summary>
+      <ol>
+        <li><b>Cuenta:</b> la del cliente si ya tiene (ej. por el quiz); si no, crear Gmail dedicado y cuenta Free en dash.cloudflare.com.</li>
+        <li><b>KV:</b> menú lateral &rarr; Storage &amp; Databases &rarr; KV &rarr; Create a namespace &rarr; <code>[cliente]-encuesta-CONFIG</code>.</li>
+        <li><b>Armar el seed</b> (el paso con criterio): partir de un seed existente y editar: <code>endpoint</code> (la /exec del Paso 2 &mdash; olvido n°1), <code>question.options</code> (las objeciones DEL RUBRO de este cliente, definirlas con Claude), <code>checkoutButtonSelectors</code> y <code>cartSelectors</code> (inspeccionar el theme: click derecho sobre el botón de compra / contador del carrito &rarr; Inspeccionar &rarr; copiar la clase), <code>previewParam</code>, <code>storeDomain</code>, <code>branding</code>.</li>
+        <li><b>Cargar el seed:</b> entrar al namespace &rarr; pestaña KV Pairs &rarr; Add entry &rarr; Key: <code>config:default</code> (exacto) &rarr; Value: el JSON completo &rarr; Save.</li>
+        <li><b>Worker:</b> Compute (Workers) &rarr; Workers &amp; Pages &rarr; Create &rarr; Create Worker &rarr; nombre <code>[cliente]-encuesta</code> &rarr; Deploy &rarr; Edit code &rarr; borrar todo &rarr; pegar TODO <code>worker-encuesta-bundle.js</code> (idéntico para todos) &rarr; Deploy.</li>
+        <li><b>Binding:</b> Settings &rarr; Bindings &rarr; + Add &rarr; KV namespace &rarr; Variable name: <code>CONFIG</code> (exacto, mayúsculas) &rarr; el namespace del cliente &rarr; Save.</li>
+        <li><b>Secret:</b> Settings &rarr; Variables and Secrets &rarr; + Add &rarr; Type: <b>Secret</b> &rarr; Name: <code>ADMIN_TOKEN</code> &rarr; Value: el token del Paso 1 &rarr; Save.</li>
+        <li><b>Verificar:</b> <code>.../health</code> responde ok; <code>.../widget.js</code> muestra JS que empieza con <code>(function () {</code> y adentro (Ctrl+F) aparece la /exec del cliente. La URL del Worker a la ficha.</li>
+      </ol>
+      <p class="hint">Nota: /health dice "service":"topwhite-encuesta" en todos los Workers; es una etiqueta interna del bundle, no significa nada.</p>
+    </details>
+
+    <details>
+      <summary><b>Paso 4</b> &mdash; GTM: el loader (5 min + permiso de publish)</summary>
+      <ol>
+        <li>Abrir <code>gtm-loader.html</code> &rarr; reemplazar <code>WORKER_URL</code> por la URL del Worker, sin barra final.</li>
+        <li>En el GTM del cliente: Etiquetas &rarr; Nueva &rarr; <b>HTML personalizado</b> &rarr; pegar &rarr; Activador: <b>All Pages</b> &rarr; nombrar <code>[Cliente] - Encuesta de salida (loader)</code> &rarr; Guardar.</li>
+        <li>Si hay una versión vieja de la encuesta como tag gigante: pausarla o borrarla (si conviven, doble carga).</li>
+        <li><b>Publicar</b> el contenedor (único publish que el sistema pide en su vida). Sin publish, se puede probar igual con Vista previa de Tag Assistant.</li>
+      </ol>
+    </details>
+
+    <details>
+      <summary><b>Paso 5</b> &mdash; Alta en ESTE admin (1 min)</summary>
+      <ol>
+        <li>Volver &rarr; <b>+ Agregar cliente</b> &rarr; nombre, URL del Worker, ADMIN_TOKEN &rarr; Conectar y guardar.</li>
+        <li>Si carga el formulario con la config del seed, el circuito completo funciona.</li>
+      </ol>
+      <p class="hint">El alta queda en TU navegador. Cada compañero agrega el cliente en el suyo con los datos de la ficha.</p>
+    </details>
+
+    <details>
+      <summary><b>Paso 6</b> &mdash; Test end-to-end (10 min &mdash; NO saltear el celular)</summary>
+      <ol>
+        <li><b>Preview desktop:</b> <code>https://[tienda]/?[previewParam]=preview</code> &rarr; mouse al borde superior &rarr; aparece &rarr; responder &rarr; fila en el Sheet con Origen = preview.</li>
+        <li><b>Preview en CELULAR real (crítico):</b> mismo link &rarr; botón atrás &rarr; aparece. Verificar que después el botón atrás siga navegando normal (si queda raro, avisar a Claude).</li>
+        <li><b>Flujo real (sin parámetro):</b> navegar tranquilo (+45s de sesión), carrito, "Iniciar compra", volver &rarr; a los ~2,5s aparece &rarr; fila con Origen = real.</li>
+        <li><b>Negativo:</b> sesión nueva sin iniciar checkout &rarr; no aparece nunca (correcto).</li>
+        <li><b>Circuito admin:</b> cambiar un texto acá &rarr; Guardar &rarr; 2 min &rarr; recargar el preview &rarr; se ve el cambio.</li>
+        <li>Mandar el link de preview al cliente: <i>"abrilo en tu celu y tocá el botón atrás para verla"</i>.</li>
+      </ol>
+    </details>
+
+    <details>
+      <summary><b>Pasos 7 y 8 (opcionales)</b> &mdash; Panel de métricas y editor del cliente</summary>
+      <p><b>7. Panel de métricas:</b> abrir <code>/cliente-index.html</code> en incógnito &rarr; setup: nombre, /exec, CLIENT_KEY &rarr; Generar link &rarr; mandárselo por canal privado (lleva la clave adentro). No enviarlo hasta que haya un par de semanas de data.</p>
+      <p><b>8. Editor del cliente:</b> en este admin &rarr; el cliente &rarr; tarjeta "Acceso del cliente (editor)" &rarr; definir usuario y clave &rarr; Guardar &rarr; copiar el link del editor y mandarlo junto con las credenciales. Revocable al instante desde la misma tarjeta.</p>
+    </details>
+
+    <details>
+      <summary><b>Los 5 errores de este proceso</b></summary>
+      <ol>
+        <li>Apps Script con acceso "Solo yo" (a vos te anda, a la tienda no). Verificar SIEMPRE en incógnito.</li>
+        <li>No reemplazar el <code>endpoint</code> en el seed o <code>WORKER_URL</code> en el loader.</li>
+        <li>El binding con otro nombre que no sea <code>CONFIG</code> exacto &rarr; error 1101.</li>
+        <li>"Nueva implementación" en vez de "Nueva versión" al editar el Apps Script.</li>
+        <li>Reutilizar tokens o claves entre clientes.</li>
+      </ol>
+    </details>
   </div>
 
   <!-- ── PANTALLA: APP (edición) ─────────────────────────── -->
@@ -310,6 +431,7 @@
   function show(screen) {
     $("screen-clients").style.display = screen === "clients" ? "block" : "none";
     $("screen-add").style.display = screen === "add" ? "block" : "none";
+    $("screen-guide").style.display = screen === "guide" ? "block" : "none";
     $("app").style.display = screen === "app" ? "block" : "none";
     window.scrollTo(0, 0);
   }
@@ -516,6 +638,8 @@
     show("add");
   });
   $("btn-add-back").addEventListener("click", function () { show("clients"); });
+  $("btn-show-guide").addEventListener("click", function () { show("guide"); });
+  $("btn-guide-back").addEventListener("click", function () { show("clients"); });
 
   $("btn-connect").addEventListener("click", function () {
     var n = $("f-name").value.trim();
