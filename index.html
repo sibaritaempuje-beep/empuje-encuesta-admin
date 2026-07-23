@@ -857,6 +857,28 @@ function doPost(e) {
     }
 
     var sheet = getSheet_();
+
+    // Anti-duplicados: si la ultima fila es identica (respuesta, texto,
+    // pagina, dispositivo y origen) y tiene menos de 90 segundos, no se
+    // vuelve a escribir. Cubre webviews (Instagram/Facebook) que pierden
+    // el almacenamiento y hacen reaparecer la encuesta.
+    var lastRow = sheet.getLastRow();
+    if (lastRow &gt; 1) {
+      var prev = sheet.getRange(lastRow, 1, 1, 10).getValues()[0];
+      var prevTime = (prev[0] instanceof Date) ? prev[0].getTime() : 0;
+      var same =
+        String(prev[1]) === String(data.respuesta    || '') &amp;&amp;
+        String(prev[2]) === String(data.texto_libre  || '') &amp;&amp;
+        String(prev[3]) === String(data.dispositivo  || '') &amp;&amp;
+        String(prev[4]) === String(data.pagina       || '') &amp;&amp;
+        String(prev[9]) === String(data.origen       || '');
+      if (same &amp;&amp; (Date.now() - prevTime) &lt; 90000) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ result: 'ok', deduped: true }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     sheet.appendRow([
       new Date(),
       data.respuesta    || '',
