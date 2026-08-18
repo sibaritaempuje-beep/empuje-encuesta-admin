@@ -308,6 +308,19 @@
     </div>
 
     <div class="card">
+      <h2>Segunda pantalla: pedir WhatsApp</h2>
+      <label class="switch">
+        <input type="checkbox" id="p-enabled">
+        <span>Activada</span>
+      </label>
+      <label for="p-title">Titulito</label>
+      <input type="text" id="p-title" placeholder="Una cosa más">
+      <label for="p-text">Texto principal</label>
+      <input type="text" id="p-text" placeholder="¿Te ayudamos a terminar tu compra? Dejanos tu WhatsApp y te contactamos.">
+      <p class="hint">Aparece después de que la persona responde, con campo de teléfono opcional. El número queda SOLO en el Sheet (columna Teléfono): nunca se muestra en el panel de métricas del cliente. Activarla recién cuando esté acordado quién contacta y en qué plazo.</p>
+    </div>
+
+    <div class="card">
       <h2>Criterios de aparición</h2>
       <div class="row">
         <div>
@@ -603,6 +616,10 @@
     renderOpenSelect((cfg.question && cfg.question.openTrigger) || "");
     $("c-thanks").value = cfg.thanksMessage || "";
     setBrandingInputs(cfg.branding);
+    var ph = cfg.phone || {};
+    $("p-enabled").checked = ph.enabled === true;
+    $("p-title").value = ph.title || "";
+    $("p-text").value = ph.text || "";
     $("c-minsec").value = typeof cfg.minSeconds === "number" ? cfg.minSeconds : 45;
     $("c-freq").value = typeof cfg.frequencyDays === "number" ? cfg.frequencyDays : 30;
     $("c-endpoint").value = cfg.endpoint || "";
@@ -632,6 +649,11 @@
       thankYouHints: linesToArr($("c-thanks-hints").value),
       cartSelectors: linesToArr($("c-cart-sels").value),
       branding: collectBranding(),
+      phone: {
+        enabled: $("p-enabled").checked,
+        title: $("p-title").value.trim(),
+        text: $("p-text").value.trim()
+      },
       question: {
         title: $("c-title").value.trim(),
         text: $("c-text").value.trim(),
@@ -812,7 +834,9 @@ var HEADERS = [
   'UTM Source',
   'UTM Medium',
   'UTM Campaign',
-  'Origen'
+  'Origen',
+  'Teléfono',
+  'ID'
 ];
 
 /**
@@ -856,9 +880,27 @@ function doPost(e) {
       data = JSON.parse(e.postData.contents);
     }
 
+    // Segunda pantalla: llega un telefono vinculado por rid → se escribe
+    // en la misma fila de la respuesta original.
+    if (String(data.tipo || '') === 'telefono') {
+      return handlePhone_(data);
+    }
+
+    // Idempotencia: cada respuesta trae un id unico (rid) generado al
+    // momento del clic. Si ya lo procesamos (reintento del navegador tras
+    // un corte de red o navegacion), no se escribe de nuevo.
+    var rid = String(data.rid || '');
+    if (rid) {
+      var cache = CacheService.getScriptCache();
+      if (cache.get('rid:' + rid)) {
+        return json_({ result: 'ok', deduped: true, via: 'rid' });
+      }
+      cache.put('rid:' + rid, '1', 21600); // recordado por 6 horas
+    }
+
     var sheet = getSheet_();
 
-    // Anti-duplicados: si la ultima fila es identica (respuesta, texto,
+    // Anti-duplicados (respaldo): si la ultima fila es identica (respuesta, texto,
     // pagina, dispositivo y origen) y tiene menos de 90 segundos, no se
     // vuelve a escribir. Cubre webviews (Instagram/Facebook) que pierden
     // el almacenamiento y hacen reaparecer la encuesta.
@@ -889,7 +931,9 @@ function doPost(e) {
       data.utm_source   || '',
       data.utm_medium   || '',
       data.utm_campaign || '',
-      data.origen       || ''
+      data.origen       || '',
+      '',
+      String(data.rid || '')
     ]);
 
     return ContentService
@@ -903,6 +947,38 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/**
+ * Escribe el telefono (segunda pantalla) en la fila de la respuesta,
+ * buscandola por su ID (rid) en las ultimas 200 filas. Idempotente.
+ * El telefono queda SOLO en el Sheet: nunca sale por el endpoint de metricas.
+ */
+function handlePhone_(data) {
+  var rid = String(data.rid || '');
+  var tel = String(data.telefono || '').trim();
+  if (!rid || !tel) return json_({ result: 'error', message: 'Faltan datos' });
+
+  var cache = CacheService.getScriptCache();
+  if (cache.get('ridtel:' + rid)) return json_({ result: 'ok', deduped: true });
+  cache.put('ridtel:' + rid, '1', 21600);
+
+  var sheet = getSheet_();
+  var last = sheet.getLastRow();
+  if (last &gt;= 2) {
+    var start = Math.max(2, last - 200);
+    var ids = sheet.getRange(start, 12, last - start + 1, 1).getValues();
+    for (var i = ids.length - 1; i &gt;= 0; i--) {
+      if (String(ids[i][0]) === rid) {
+        sheet.getRange(start + i, 11).setValue(tel);
+        return json_({ result: 'ok', telefono: true });
+      }
+    }
+  }
+  // Si la respuesta original no llego (caso raro), se registra suelto.
+  sheet.appendRow([new Date(), '(dejo su telefono)', '', data.dispositivo || '',
+    data.pagina || '', '', '', '', '', data.origen || '', tel, rid]);
+  return json_({ result: 'ok', telefono: true, huerfano: true });
 }
 
 function json_(obj) {
@@ -941,6 +1017,7 @@ function computeMetrics_() {
     porRespuesta: {},
     porDispositivo: {},
     porCampania: {},
+    telefonos: 0,
     semanal: [],
     comentarios: []
   };
@@ -975,6 +1052,8 @@ function computeMetrics_() {
       weekly[wkSort] = weekly[wkSort] || { semana: wk, respuestas: 0 };
       weekly[wkSort].respuestas++;
     }
+
+    if (String(r[10] || '').trim()) out.telefonos++;
 
     var txt = String(r[2] || '').trim();
     if (txt) {
@@ -1055,6 +1134,8 @@ function buildCss(branding) {
     '.twxs-extra textarea { width: 100%; min-height: 64px; resize: vertical; border: 1px solid ' + c.border + '; border-radius: 11px; padding: 10px 12px; font-size: 15px; font-family: inherit; color: ' + c.text + '; background: ' + c.background + '; }',
     '.twxs-send { margin-top: 10px; width: 100%; min-height: 46px; border: 0; border-radius: 11px; background: ' + c.buttonBackground + '; color: ' + c.buttonText + '; font-size: 15px; font-weight: 600; cursor: pointer; }',
     '.twxs-send:hover { opacity: .9; }',
+    '.twxs-tel { width: 100%; min-height: 46px; border: 1px solid ' + c.border + '; border-radius: 11px; padding: 10px 12px; font-size: 16px; font-family: inherit; color: ' + c.text + '; background: ' + c.background + '; margin-bottom: 8px; }',
+    '.twxs-skip { margin-top: 8px; width: 100%; min-height: 40px; border: 0; background: transparent; color: ' + c.muted + '; font-size: 14px; cursor: pointer; }',
     '.twxs-thanks { text-align: center; padding: 8px 4px 6px; }',
     '.twxs-thanks .twxs-t-msg { font-size: 16px; font-weight: 600; margin-top: 6px; }'
   ].join('\n');
@@ -1083,6 +1164,7 @@ const WIDGET_LOGIC = [
 '  var SS_SESSION   = "tw_exit_survey_session_start";',
 '  var SS_CHECKOUT  = "tw_exit_survey_checkout_started";',
 '  var SS_PURCHASED = "tw_exit_survey_purchased";',
+'  var CK_STATE = "tw_xs_state";',
 '',
 '  function isPreview() {',
 '    try {',
@@ -1095,14 +1177,47 @@ const WIDGET_LOGIC = [
 '    return window.matchMedia &amp;&amp; window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;',
 '  }',
 '',
-'  function getLS() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch (e) { return {}; } }',
-'  function setLS(o) { try { localStorage.setItem(LS_KEY, JSON.stringify(o)); } catch (e) {} }',
+'  function getLS() {',
+'    var s = {};',
+'    try { s = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch (e) {}',
+'    var c = ckGet(CK_STATE);',
+'    if (c) {',
+'      try {',
+'        var cs = JSON.parse(c);',
+'        if (cs.responded) s.responded = true;',
+'        if (cs.dismissed) s.dismissed = true;',
+'        if (cs.lastShown &amp;&amp; (!s.lastShown || cs.lastShown &gt; s.lastShown)) s.lastShown = cs.lastShown;',
+'      } catch (e) {}',
+'    }',
+'    return s;',
+'  }',
+'  function setLS(o) {',
+'    try { localStorage.setItem(LS_KEY, JSON.stringify(o)); } catch (e) {}',
+'    ckSet(CK_STATE, JSON.stringify(o), CONFIG.frequencyDays || 30);',
+'  }',
 '  function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }',
 '  function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }',
+'  function ckSet(name, val, days) {',
+'    try {',
+'      var c = name + "=" + encodeURIComponent(val) + "; path=/; SameSite=Lax";',
+'      if (days) c += "; max-age=" + (days * 86400);',
+'      document.cookie = c;',
+'    } catch (e) {}',
+'  }',
+'  function ckGet(name) {',
+'    try {',
+'      var m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));',
+'      return m ? decodeURIComponent(m[1]) : null;',
+'    } catch (e) { return null; }',
+'  }',
+'  // Estado de sesion con doble respaldo (sessionStorage + cookie de sesion),',
+'  // para webviews donde el storage es volatil.',
+'  function sGet(k) { var v = ssGet(k); return (v === null || v === undefined) ? ckGet(k) : v; }',
+'  function sSet(k, v) { ssSet(k, v); ckSet(k, v, 0); }',
 '',
-'  if (!ssGet(SS_SESSION)) ssSet(SS_SESSION, String(Date.now()));',
+'  if (!sGet(SS_SESSION)) sSet(SS_SESSION, String(Date.now()));',
 '  function secondsOnSite() {',
-'    var start = parseInt(ssGet(SS_SESSION) || String(Date.now()), 10);',
+'    var start = parseInt(sGet(SS_SESSION) || String(Date.now()), 10);',
 '    return (Date.now() - start) / 1000;',
 '  }',
 '',
@@ -1120,11 +1235,11 @@ const WIDGET_LOGIC = [
 '  function isThankYouPage() { return urlHas(CONFIG.thankYouHints); }',
 '  function isCheckoutPage() { return !isThankYouPage() &amp;&amp; urlHas(CONFIG.checkoutPathHints); }',
 '',
-'  function checkoutStarted() { return ssGet(SS_CHECKOUT) === "1"; }',
-'  function markCheckout() { ssSet(SS_CHECKOUT, "1"); maybeArmMobile(); }',
+'  function checkoutStarted() { return sGet(SS_CHECKOUT) === "1"; }',
+'  function markCheckout() { sSet(SS_CHECKOUT, "1"); maybeArmMobile(); }',
 '',
 '  if (isCheckoutPage()) markCheckout();',
-'  if (isThankYouPage()) ssSet(SS_PURCHASED, "1");',
+'  if (isThankYouPage()) sSet(SS_PURCHASED, "1");',
 '',
 '  document.addEventListener("click", function (e) {',
 '    var el = e.target;',
@@ -1202,7 +1317,9 @@ const WIDGET_LOGIC = [
 '',
 '  var shown = false;',
 '',
-'  function buildPayload(respuesta, texto) {',
+'  var PHONE = CONFIG.phone || {};',
+'  function newRid() { return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10); }',
+'  function buildPayload(respuesta, texto, rid) {',
 '    return {',
 '      respuesta: respuesta,',
 '      texto_libre: texto || "",',
@@ -1210,7 +1327,8 @@ const WIDGET_LOGIC = [
 '      pagina: location.pathname + location.search,',
 '      carrito: cartInfo(),',
 '      utm_source: utms.utm_source, utm_medium: utms.utm_medium, utm_campaign: utms.utm_campaign,',
-'      origen: preview ? "preview" : "real"',
+'      origen: preview ? "preview" : "real",',
+'      rid: rid',
 '    };',
 '  }',
 '  function markResponded() { if (preview) return; var s = getLS(); s.responded = true; s.lastShown = Date.now(); setLS(s); }',
@@ -1219,6 +1337,36 @@ const WIDGET_LOGIC = [
 '  function closeW(wrap) {',
 '    wrap.classList.remove("twxs-in");',
 '    setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 420);',
+'  }',
+'  function afterAnswer(wrap, rid) {',
+'    if (PHONE.enabled) { renderPhone(wrap, rid); } else { thankYou(wrap); }',
+'  }',
+'  function renderPhone(wrap, rid) {',
+'    wrap.innerHTML =',
+'      \'&lt;p class="twxs-title"&gt;&lt;/p&gt;\' +',
+'      \'&lt;h3 class="twxs-q"&gt;&lt;/h3&gt;\' +',
+'      \'&lt;input type="tel" class="twxs-tel" inputmode="tel"&gt;\' +',
+'      \'&lt;button type="button" class="twxs-send"&gt;&lt;/button&gt;\' +',
+'      \'&lt;button type="button" class="twxs-skip"&gt;&lt;/button&gt;\';',
+'    wrap.querySelector(".twxs-title").textContent = PHONE.title || "Una cosa m\\u00e1s";',
+'    wrap.querySelector(".twxs-q").textContent = PHONE.text || "\\u00bfTe ayudamos a terminar tu compra? Dejanos tu WhatsApp y te contactamos.";',
+'    var tel = wrap.querySelector(".twxs-tel");',
+'    tel.setAttribute("placeholder", PHONE.placeholder || "Tu WhatsApp");',
+'    var sb = wrap.querySelector(".twxs-send");',
+'    sb.textContent = PHONE.sendLabel || "Enviar";',
+'    wrap.querySelector(".twxs-skip").textContent = PHONE.skipLabel || "No, gracias";',
+'    sb.addEventListener("click", function () {',
+'      var digits = tel.value.replace(/[^0-9]/g, "");',
+'      if (digits.length &lt; 6) { tel.focus(); return; }',
+'      send({',
+'        tipo: "telefono", rid: rid, telefono: tel.value.trim(),',
+'        dispositivo: isMobile() ? "mobile" : "desktop",',
+'        pagina: location.pathname + location.search,',
+'        origen: preview ? "preview" : "real"',
+'      });',
+'      thankYou(wrap);',
+'    });',
+'    wrap.querySelector(".twxs-skip").addEventListener("click", function () { thankYou(wrap); });',
 '  }',
 '  function thankYou(wrap) {',
 '    wrap.innerHTML = \'&lt;div class="twxs-thanks"&gt;&lt;div class="twxs-t-msg"&gt;&lt;/div&gt;&lt;/div&gt;\';',
@@ -1229,7 +1377,7 @@ const WIDGET_LOGIC = [
 '  function render() {',
 '    if (shown) return;',
 '    shown = true;',
-'    ssSet(SS_SHOWN, "1");',
+'    sSet(SS_SHOWN, "1");',
 '',
 '    var wrap = document.createElement("div");',
 '    wrap.className = "twxs-wrap";',
@@ -1274,24 +1422,26 @@ const WIDGET_LOGIC = [
 '          wrap.querySelector(".twxs-q").textContent = "Contanos, \\u00bfqu\\u00e9 pas\\u00f3?";',
 '          textarea.focus();',
 '        } else {',
-'          send(buildPayload(label, "")); markResponded(); thankYou(wrap);',
+'          var rid = newRid();',
+'          send(buildPayload(label, "", rid)); markResponded(); afterAnswer(wrap, rid);',
 '        }',
 '      });',
 '    }',
 '    for (var m = 0; m &lt; optBtns.length; m++) onOpt(optBtns[m]);',
 '',
 '    wrap.querySelector(".twxs-send").addEventListener("click", function () {',
-'      send(buildPayload(QUESTION.openTrigger, textarea.value.trim())); markResponded(); thankYou(wrap);',
+'      var rid = newRid();',
+'      send(buildPayload(QUESTION.openTrigger, textarea.value.trim(), rid)); markResponded(); afterAnswer(wrap, rid);',
 '    });',
 '  }',
 '',
 '  function eligible() {',
 '    if (preview) return true;',
-'    if (ssGet(SS_PURCHASED) === "1") return false;',
+'    if (sGet(SS_PURCHASED) === "1") return false;',
 '    if (isThankYouPage()) return false;',
 '    if (getLS().responded) return false;',
 '    if (withinFrequency()) return false;',
-'    if (ssGet(SS_SHOWN) === "1") return false;',
+'    if (sGet(SS_SHOWN) === "1") return false;',
 '    if (!checkoutStarted()) return false;',
 '    if (secondsOnSite() &lt; CONFIG.minSeconds) return false;',
 '    return true;',
@@ -1453,9 +1603,15 @@ export default {
       }
 
       if (path === '/admin/config' &amp;&amp; request.method === 'PUT') {
-        let cfg;
-        try { cfg = await request.json(); }
+        let body;
+        try { body = await request.json(); }
         catch (e) { return json({ result: 'error', message: 'Body JSON invalido' }, 400); }
+        // Merge sobre la config existente: los campos que el admin no maneja
+        // (o versiones futuras) no se pierden al guardar.
+        const rawPrev = await env.CONFIG.get('config:default');
+        let cfg = {};
+        if (rawPrev) { try { cfg = JSON.parse(rawPrev); } catch (e) { cfg = {}; } }
+        Object.assign(cfg, body);
         const errors = validateConfig(cfg);
         if (errors.length) return json({ result: 'error', errors: errors }, 400);
         await env.CONFIG.put('config:default', JSON.stringify(cfg));
